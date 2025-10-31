@@ -1,23 +1,26 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
-using k6_tester.Models;
 
 namespace k6_tester.Services;
 
 public static class K6Runner
 {
-    public static async Task RunAsync(K6LoadTestConfig config, Stream outputStream, CancellationToken cancellationToken)
+    public static async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(outputStream);
 
-        var scriptResult = K6ScriptBuilder.BuildScript(config);
-        var tempFilePath = Path.Combine(Path.GetTempPath(), $"{Path.GetRandomFileName()}.js");
+        if (string.IsNullOrWhiteSpace(script))
+        {
+            throw new ArgumentException("Script cannot be null or whitespace.", nameof(script));
+        }
+
+        var tempFileName = BuildTempFileName(fileNameHint);
+        var tempFilePath = Path.Combine(Path.GetTempPath(), tempFileName);
 
         try
         {
-            await File.WriteAllTextAsync(tempFilePath, scriptResult.Script, Encoding.UTF8, cancellationToken);
+            await File.WriteAllTextAsync(tempFilePath, script, Encoding.UTF8, cancellationToken);
 
             var startInfo = new ProcessStartInfo
             {
@@ -92,6 +95,21 @@ public static class K6Runner
                 // Ignore cleanup failures.
             }
         }
+    }
+
+    private static string BuildTempFileName(string? fileNameHint)
+    {
+        var baseName = string.IsNullOrWhiteSpace(fileNameHint)
+            ? "k6-script"
+            : Path.GetFileNameWithoutExtension(fileNameHint);
+
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            baseName = "k6-script";
+        }
+
+        var uniqueSuffix = Path.GetRandomFileName().Replace(".", string.Empty);
+        return $"{baseName}_{uniqueSuffix}.js";
     }
 
     private static async Task PipeStreamAsync(StreamReader reader, string prefix, Stream destination, CancellationToken cancellationToken)

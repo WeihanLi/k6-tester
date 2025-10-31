@@ -190,6 +190,36 @@
       letter-spacing: 0.015em;
     }
 
+    .code-editor-container {
+      position: relative;
+      background: #191919;
+      border: 1px solid #333;
+      border-radius: 10px;
+      min-height: 320px;
+      overflow: hidden;
+    }
+
+    .code-editor-placeholder {
+      position: absolute;
+      top: 0.85rem;
+      left: 1rem;
+      color: #858585;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    #scriptEditor {
+      width: 100%;
+      height: 320px;
+    }
+
+    #scriptEditor.ace_editor {
+      font-size: 0.9rem;
+      letter-spacing: 0.02em;
+    }
+
     .helper {
       font-size: 0.8rem;
       color: #a7a7a7;
@@ -356,7 +386,11 @@
 
       <section class="card output-area">
         <h2>Script preview</h2>
-        <textarea id="scriptOutput" readonly placeholder="Configure the form and click Generate script."></textarea>
+        <div class="code-editor-container">
+          <div id="scriptEditor" class="code-editor" role="textbox" aria-label="Generated k6 script"></div>
+          <div id="scriptPlaceholder" class="code-editor-placeholder">Configure the form and click Generate script.</div>
+        </div>
+        <textarea id="scriptOutput" placeholder="Configure the form and click Generate script." hidden></textarea>
         <div class="helper">
           Suggested file name: <span id="fileName">—</span>
         </div>
@@ -396,6 +430,8 @@
     </tr>
   </template>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.3/ace.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.3/ext-language_tools.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
     const defaults = {
       testName: "homepage_smoke",
@@ -429,6 +465,8 @@
     const httpMethodSelect = document.getElementById("httpMethod");
     const payloadGroup = document.getElementById("payloadGroup");
     const scriptOutput = document.getElementById("scriptOutput");
+    const scriptPlaceholder = document.getElementById("scriptPlaceholder");
+    const scriptEditorHost = document.getElementById("scriptEditor");
     const commandOutput = document.getElementById("commandOutput");
     const statusMessage = document.getElementById("statusMessage");
     const fileNameSpan = document.getElementById("fileName");
@@ -436,6 +474,9 @@
     const cancelRunBtn = document.getElementById("cancelRunBtn");
     const runOutput = document.getElementById("runOutput");
     let currentRunController = null;
+    let scriptEditor = null;
+
+    initializeEditor();
 
     document.getElementById("addStageBtn").addEventListener("click", () => addStageRow());
     document.getElementById("clearStagesBtn").addEventListener("click", () => {
@@ -444,7 +485,7 @@
     document.getElementById("addHeaderBtn").addEventListener("click", () => addKeyValueRow(headersBody));
     document.getElementById("addTagBtn").addEventListener("click", () => addKeyValueRow(tagsBody));
     document.getElementById("resetBtn").addEventListener("click", resetForm);
-    document.getElementById("copyScriptBtn").addEventListener("click", () => copyToClipboard(scriptOutput.value, "Script copied to clipboard"));
+    document.getElementById("copyScriptBtn").addEventListener("click", () => copyToClipboard(getScriptContent(), "Script copied to clipboard"));
     document.getElementById("copyCommandBtn").addEventListener("click", () => copyToClipboard(commandOutput.value, "Command copied to clipboard"));
     document.getElementById("downloadBtn").addEventListener("click", downloadScript);
     runBtn.addEventListener("click", startRun);
@@ -458,6 +499,74 @@
       event.preventDefault();
       await generateScript();
     });
+
+    function initializeEditor() {
+      if (!scriptEditorHost) {
+        return;
+      }
+
+      if (window.ace) {
+        ace.config.set("basePath", "https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.3/");
+        scriptEditor = ace.edit(scriptEditorHost, {
+          theme: "ace/theme/monokai",
+          mode: "ace/mode/javascript",
+          showPrintMargin: false,
+          wrap: true,
+          highlightActiveLine: true,
+          highlightSelectedWord: true,
+        });
+        scriptEditor.session.setUseWorker(false);
+        scriptEditor.session.setMode("ace/mode/javascript");
+        scriptEditor.setOptions({
+          enableBasicAutocompletion: true,
+          enableLiveAutocompletion: false,
+          enableSnippets: false,
+          tabSize: 2,
+          useSoftTabs: true,
+        });
+        scriptEditor.on("change", () => {
+          const value = scriptEditor.getValue();
+          scriptOutput.value = value;
+          toggleScriptPlaceholder(value);
+        });
+        const initialValue = scriptOutput.value || "";
+        scriptEditor.setValue(initialValue, -1);
+        scriptEditor.clearSelection();
+        toggleScriptPlaceholder(initialValue);
+      } else {
+        if (scriptEditorHost) {
+          scriptEditorHost.style.display = "none";
+        }
+        if (scriptPlaceholder) {
+          scriptPlaceholder.style.display = "none";
+        }
+        scriptOutput.hidden = false;
+        scriptOutput.classList.add("fallback-textarea");
+      }
+    }
+
+    function getScriptContent() {
+      return scriptEditor ? scriptEditor.getValue() : scriptOutput.value;
+    }
+
+    function setScriptContent(content) {
+      const value = content ?? "";
+      if (scriptEditor) {
+        scriptEditor.setValue(value, -1);
+        scriptEditor.clearSelection();
+      }
+      scriptOutput.value = value;
+      toggleScriptPlaceholder(value);
+    }
+
+    function toggleScriptPlaceholder(content) {
+      if (!scriptPlaceholder) {
+        return;
+      }
+
+      const hasContent = Boolean(content && content.trim().length > 0);
+      scriptPlaceholder.style.display = hasContent ? "none" : "block";
+    }
 
     function addStageRow(stage = { duration: "30s", target: 10 }) {
       const clone = stageTemplate.content.cloneNode(true);
@@ -518,7 +627,7 @@
 
     async function generateScript() {
       clearStatus();
-      const payload = buildRequestPayload();
+      const payload = buildConfigPayload();
 
       try {
         const response = await fetch("/api/k6/script", {
@@ -533,7 +642,7 @@
         }
 
         const result = await response.json();
-        scriptOutput.value = result.script || "";
+        setScriptContent(result.script || "");
         commandOutput.value = result.command || "";
         fileNameSpan.textContent = result.suggestedFileName || "k6-test.js";
         setStatus("Script generated successfully");
@@ -542,7 +651,7 @@
       }
     }
 
-    function buildRequestPayload() {
+    function buildConfigPayload() {
       const formData = new FormData(configForm);
       const method = formData.get("httpMethod") ?? "GET";
       const payload = {
@@ -592,7 +701,7 @@
     }
 
     function downloadScript() {
-      const script = scriptOutput.value;
+      const script = getScriptContent();
       const fileName = fileNameSpan.textContent || "k6-script.js";
       if (!script) {
         setStatus("Generate a script first", true);
@@ -618,7 +727,20 @@
       }
 
       clearStatus();
-      const payload = buildRequestPayload();
+      const script = getScriptContent();
+      if (!script.trim()) {
+        setStatus("Generate or edit a k6 script before running", true);
+        return;
+      }
+
+      const config = buildConfigPayload();
+      const payload = {
+        config,
+        script,
+        fileName: fileNameSpan.textContent && fileNameSpan.textContent !== "—"
+          ? fileNameSpan.textContent
+          : "k6-script.js"
+      };
       currentRunController = new AbortController();
       runOutput.value = "";
       setRunningState(true);
@@ -745,7 +867,7 @@
       defaults.tags.forEach(tag => addKeyValueRow(tagsBody, tag));
 
       onMethodChange();
-      scriptOutput.value = "";
+      setScriptContent("");
       commandOutput.value = "";
       fileNameSpan.textContent = "—";
       runOutput.value = "";
