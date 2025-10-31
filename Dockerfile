@@ -13,14 +13,22 @@ RUN dotnet publish ./src/k6-tester/k6-tester.csproj -a $TARGETARCH -c Release -o
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
-    mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://dl.k6.io/key.gpg | gpg --dearmor -o /etc/apt/keyrings/k6-archive-keyring.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | tee /etc/apt/sources.list.d/k6.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends k6 && \
-    rm -rf /var/lib/apt/lists/*
+ARG TARGETARCH
+ARG K6_VERSION=1.3.0
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates curl; \
+    rm -rf /var/lib/apt/lists/*; \
+    case "$TARGETARCH" in \
+        amd64) k6_arch=amd64 ;; \
+        arm64) k6_arch=arm64 ;; \
+        arm*) k6_arch=arm ;; \
+        *) echo "Unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-${k6_arch}.tar.gz" -o /tmp/k6.tar.gz; \
+    tar -C /usr/local/bin -xzf /tmp/k6.tar.gz --strip-components=1 "k6-v${K6_VERSION}-linux-${k6_arch}/k6"; \
+    rm /tmp/k6.tar.gz
 
 COPY --from=build /app/publish .
 
