@@ -15,7 +15,7 @@
 ```
 .
 ├── README.md                # Project overview (this file)
-├── k6-tester.sln            # Solution file referencing src/ and test/ projects
+├── k6-tester.slnx           # Solution file referencing src/ and test/ projects
 ├── src/
 │   └── k6-tester/           # ASP.NET Core minimal API + static SPA
 │       ├── Models/          # DTOs for script configuration & responses
@@ -48,6 +48,28 @@ Then open your browser at `http://localhost:5266/` (or the URL printed by `dotne
 ```bash
 dotnet test test/k6-tester.Tests/k6-tester.Tests.csproj
 ```
+
+## Running in Docker
+
+The repository ships with a multi-stage `Dockerfile` that compiles the app, installs the k6 CLI in the final image, and exposes the web UI on port 8080.
+
+```bash
+# Build the container image
+docker build -t k6-tester .
+
+# Run it (press Ctrl+C to stop)
+docker run --rm -p 8080:8080 k6-tester
+```
+
+Then browse to `http://localhost:8080`. Any UI-triggered k6 runs execute inside the container thanks to the bundled k6 binary.
+
+## Roadmap
+
+1. **Scenario library & persistence** – allow saving generated configs/scripts to a backing store so common tests can be versioned, shared, and rerun with minimal tweaks.
+2. **Auth-enabled deployments** – integrate with ASP.NET Core authentication/authorization to gate who can generate or execute load tests in shared environments.
+3. **Advanced runners** – add pluggable back ends for remote execution (e.g., k6 cloud, distributed agents, or containerized workers) with run status dashboards.
+4. **Observability hooks** – stream metrics to Prometheus/InfluxDB/Grafana for richer reporting and optionally expose summarized charts in the UI.
+5. **Extensible script templates** – support custom JS snippets, checks, and thresholds so teams can extend the base generator with reusable building blocks.
 
 ## Next steps
 
