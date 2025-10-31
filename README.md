@@ -57,8 +57,14 @@ The repository ships with a multi-stage `Dockerfile` that compiles the app, inst
 # Build the container image
 docker build -t k6-tester .
 
-# Run it (press Ctrl+C to stop)
+# Run it
 docker run --rm -p 8080:8080 k6-tester
+```
+
+or run prebuilt image directly
+
+```bash
+docker run --rm -p 8080:8080 weihanli/k6-tester
 ```
 
 Then browse to `http://localhost:8080`. Any UI-triggered k6 runs execute inside the container thanks to the bundled k6 binary.
