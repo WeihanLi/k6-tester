@@ -41,7 +41,7 @@ dotnet build
 dotnet run --project src/k6-tester/k6-tester.csproj
 ```
 
-Then open your browser at `http://localhost:5000` (or the URL printed by `dotnet run`). Adjust configuration parameters in the UI, click **Generate script** to preview, and **Run with k6** to execute the script locally.
+Then open your browser at `http://localhost:5266/` (or the URL printed by `dotnet run`). Adjust configuration parameters in the UI, click **Generate script** to preview, and **Run with k6** to execute the script locally.
 
 ## Running tests
 
