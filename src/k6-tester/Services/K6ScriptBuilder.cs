@@ -115,7 +115,10 @@ public static class K6ScriptBuilder
         }
 
         var sleepSeconds = Math.Max(0, config.SleepSeconds);
-        builder.AppendLine($"  sleep({sleepSeconds});");
+        if (sleepSeconds > 0)
+        {
+            builder.AppendLine($"  sleep({sleepSeconds});");
+        }
         builder.AppendLine("}");
 
         return builder.ToString();
