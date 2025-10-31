@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>k6 Load Test Builder</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #1e1e1e;
+      color: #f3f3f3;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.5rem 2rem;
+      background: #0b5fff;
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: #2b2b2b;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 20px 45px -30px rgba(0, 0, 0, 0.65);
+    }
+
+    h2 {
+      margin: 0 0 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.75rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      display: block;
+      margin-bottom: 0.35rem;
+      color: #d1d7ff;
+      letter-spacing: 0.02em;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid #3c3c3c;
+      background: #1f1f1f;
+      color: inherit;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+      font-family: "Consolas", "Fira Code", "Source Code Pro", monospace;
+    }
+
+    .inline {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .inline input[type="number"] {
+      max-width: 120px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button.primary {
+      background: #0b5fff;
+      color: #fff;
+      box-shadow: 0 18px 30px -20px rgba(11, 95, 255, 0.7);
+    }
+
+    button.secondary {
+      background: transparent;
+      color: inherit;
+      border: 1px solid #3c3c3c;
+    }
+
+    button.danger {
+      background: #ff3b3f;
+      color: #fff;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 28px -24px rgba(255, 255, 255, 0.65);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #232323;
+    }
+
+    th, td {
+      border-bottom: 1px solid #333;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+    }
+
+    th {
+      text-align: left;
+      color: #a3adff;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .output-area textarea {
+      min-height: 320px;
+      background: #191919;
+      border: 1px solid #333;
+      padding: 1rem;
+      border-radius: 10px;
+      color: #f5f5f5;
+      letter-spacing: 0.015em;
+    }
+
+    .helper {
+      font-size: 0.8rem;
+      color: #a7a7a7;
+      margin-top: 0.35rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.65rem;
+      background: rgba(11, 95, 255, 0.15);
+      color: #cfe0ff;
+      border-radius: 999px;
+    }
+
+    .status {
+      font-size: 0.88rem;
+      color: #93ffb3;
+    }
+
+    .status.error {
+      color: #ff8a8a;
+    }
+
+    @media (max-width: 640px) {
+      header {
+        font-size: 1.25rem;
+        padding: 1.25rem 1.5rem;
+      }
+
+      main {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>k6 Load Test Builder</header>
+  <main>
+    <div class="layout">
+      <section class="card">
+        <h2>Test Configuration</h2>
+        <form id="configForm">
+          <div class="fields">
+            <div>
+              <label for="testName">Test name</label>
+              <input type="text" id="testName" name="testName" required>
+              <div class="helper">Used for scenario id and suggested file name</div>
+            </div>
+            <div>
+              <label for="targetUrl">Target URL</label>
+              <input type="text" id="targetUrl" name="targetUrl" required>
+            </div>
+            <div>
+              <label for="httpMethod">HTTP method</label>
+              <select id="httpMethod" name="httpMethod">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+                <option value="DELETE">DELETE</option>
+              </select>
+            </div>
+            <div id="durationGroup">
+              <label for="duration">Duration</label>
+              <input type="text" id="duration" name="duration" placeholder="5m">
+              <div class="helper">Only used for constant VU profile</div>
+            </div>
+            <div id="virtualUsersGroup">
+              <label for="virtualUsers">Virtual users</label>
+              <input type="number" id="virtualUsers" name="virtualUsers" min="1" value="10">
+              <div class="helper">Used when no stages are configured</div>
+            </div>
+            <div>
+              <label for="sleepSeconds">Sleep seconds</label>
+              <input type="number" id="sleepSeconds" name="sleepSeconds" min="0" value="1">
+            </div>
+            <div>
+              <label for="p95Threshold">p(95) threshold (ms)</label>
+              <input type="number" id="p95Threshold" name="p95Threshold" min="1" placeholder="500">
+              <div class="helper">Leave blank to omit threshold rules</div>
+            </div>
+            <div>
+              <label for="checkResponse">
+                <input type="checkbox" id="checkResponse" name="checkResponse" checked>
+                Verify status 200
+              </label>
+              <div class="helper">Adds a basic check assertion</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="inline" style="justify-content: space-between;">
+              <h3 style="margin: 0; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em;">Load profile</h3>
+              <span class="badge">Ramping stages</span>
+            </div>
+            <div class="helper">Add stages to switch to ramping profile. Remove all stages to use constant VU profile.</div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Duration</th>
+                <th>Target VUs</th>
+                <th style="width: 60px;"></th>
+              </tr>
+            </thead>
+            <tbody id="stagesBody"></tbody>
+          </table>
+          <div class="actions">
+            <button type="button" class="secondary" id="addStageBtn">Add stage</button>
+            <button type="button" class="secondary" id="clearStagesBtn">Clear stages</button>
+          </div>
+
+          <div>
+            <h3 style="margin: 1rem 0 0.35rem; font-size: 0.95rem;">Headers</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Value</th>
+                  <th style="width: 60px;"></th>
+                </tr>
+              </thead>
+              <tbody id="headersBody"></tbody>
+            </table>
+            <div class="actions">
+              <button type="button" class="secondary" id="addHeaderBtn">Add header</button>
+            </div>
+          </div>
+
+          <div>
+            <h3 style="margin: 1rem 0 0.35rem; font-size: 0.95rem;">Tags</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Value</th>
+                  <th style="width: 60px;"></th>
+                </tr>
+              </thead>
+              <tbody id="tagsBody"></tbody>
+            </table>
+            <div class="actions">
+              <button type="button" class="secondary" id="addTagBtn">Add tag</button>
+            </div>
+          </div>
+
+          <div id="payloadGroup">
+            <label for="payload">Request payload</label>
+            <textarea id="payload" name="payload" placeholder='{"example":"value"}'></textarea>
+            <div class="helper">Only used for POST, PUT and PATCH requests</div>
+          </div>
+
+          <div class="actions" style="justify-content: flex-end;">
+            <button type="button" class="secondary" id="resetBtn">Reset</button>
+            <button type="submit" class="primary">Generate script</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card output-area">
+        <h2>Script preview</h2>
+        <textarea id="scriptOutput" readonly placeholder="Configure the form and click Generate script."></textarea>
+        <div class="helper">
+          Suggested file name: <span id="fileName">—</span>
+        </div>
+        <div style="margin-top: 0.75rem;">
+          <label for="commandOutput">k6 command</label>
+          <input type="text" id="commandOutput" readonly placeholder="k6 run <fileName>.js">
+        </div>
+        <div class="actions" style="margin-top: 0.75rem;">
+          <button type="button" class="primary" id="runBtn">Run with k6</button>
+          <button type="button" class="danger" id="cancelRunBtn" style="visibility: hidden;" disabled>Cancel run</button>
+          <button type="button" class="secondary" id="copyScriptBtn">Copy script</button>
+          <button type="button" class="secondary" id="copyCommandBtn">Copy command</button>
+          <button type="button" class="secondary" id="downloadBtn">Download script</button>
+        </div>
+        <div style="margin-top: 0.75rem;">
+          <label for="runOutput">k6 output</label>
+          <textarea id="runOutput" readonly placeholder="Run the test to view live k6 output."></textarea>
+        </div>
+        <div id="statusMessage" class="status" style="margin-top: 0.75rem;"></div>
+      </section>
+    </div>
+  </main>
+
+  <template id="stageRowTemplate">
+    <tr>
+      <td><input type="text" name="stageDuration" placeholder="30s"></td>
+      <td><input type="number" name="stageTarget" min="0" value="10"></td>
+      <td><button type="button" class="danger removeRowBtn">×</button></td>
+    </tr>
+  </template>
+
+  <template id="keyValueRowTemplate">
+    <tr>
+      <td><input type="text" name="rowKey" placeholder="key"></td>
+      <td><input type="text" name="rowValue" placeholder="value"></td>
+      <td><button type="button" class="danger removeRowBtn">×</button></td>
+    </tr>
+  </template>
+
+  <script>
+    const defaults = {
+      testName: "homepage_smoke",
+      targetUrl: "https://test.k6.io",
+      httpMethod: "GET",
+      duration: "2m",
+      virtualUsers: 10,
+      stages: [
+        { duration: "30s", target: 5 },
+        { duration: "1m", target: 20 },
+        { duration: "30s", target: 0 }
+      ],
+      sleepSeconds: 1,
+      headers: [
+        { key: "Content-Type", value: "application/json" }
+      ],
+      payload: "",
+      p95ThresholdMs: 500,
+      tags: [
+        { key: "environment", value: "test" }
+      ],
+      checkResponse: true
+    };
+
+    const configForm = document.getElementById("configForm");
+    const stagesBody = document.getElementById("stagesBody");
+    const headersBody = document.getElementById("headersBody");
+    const tagsBody = document.getElementById("tagsBody");
+    const stageTemplate = document.getElementById("stageRowTemplate");
+    const keyValueTemplate = document.getElementById("keyValueRowTemplate");
+    const httpMethodSelect = document.getElementById("httpMethod");
+    const payloadGroup = document.getElementById("payloadGroup");
+    const scriptOutput = document.getElementById("scriptOutput");
+    const commandOutput = document.getElementById("commandOutput");
+    const statusMessage = document.getElementById("statusMessage");
+    const fileNameSpan = document.getElementById("fileName");
+    const runBtn = document.getElementById("runBtn");
+    const cancelRunBtn = document.getElementById("cancelRunBtn");
+    const runOutput = document.getElementById("runOutput");
+    let currentRunController = null;
+
+    document.getElementById("addStageBtn").addEventListener("click", () => addStageRow());
+    document.getElementById("clearStagesBtn").addEventListener("click", () => {
+      stagesBody.innerHTML = "";
+    });
+    document.getElementById("addHeaderBtn").addEventListener("click", () => addKeyValueRow(headersBody));
+    document.getElementById("addTagBtn").addEventListener("click", () => addKeyValueRow(tagsBody));
+    document.getElementById("resetBtn").addEventListener("click", resetForm);
+    document.getElementById("copyScriptBtn").addEventListener("click", () => copyToClipboard(scriptOutput.value, "Script copied to clipboard"));
+    document.getElementById("copyCommandBtn").addEventListener("click", () => copyToClipboard(commandOutput.value, "Command copied to clipboard"));
+    document.getElementById("downloadBtn").addEventListener("click", downloadScript);
+    runBtn.addEventListener("click", startRun);
+    cancelRunBtn.addEventListener("click", cancelRun);
+    stagesBody.addEventListener("click", handleRowRemoval);
+    headersBody.addEventListener("click", handleRowRemoval);
+    tagsBody.addEventListener("click", handleRowRemoval);
+    httpMethodSelect.addEventListener("change", onMethodChange);
+
+    configForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await generateScript();
+    });
+
+    function addStageRow(stage = { duration: "30s", target: 10 }) {
+      const clone = stageTemplate.content.cloneNode(true);
+      const [durationInput, targetInput] = clone.querySelectorAll("input");
+      durationInput.value = stage.duration;
+      targetInput.value = stage.target;
+      stagesBody.appendChild(clone);
+    }
+
+    function addKeyValueRow(container, pair = { key: "", value: "" }) {
+      const clone = keyValueTemplate.content.cloneNode(true);
+      const [keyInput, valueInput] = clone.querySelectorAll("input");
+      keyInput.value = pair.key;
+      valueInput.value = pair.value;
+      container.appendChild(clone);
+    }
+
+    function handleRowRemoval(event) {
+      if (event.target.classList.contains("removeRowBtn")) {
+        const row = event.target.closest("tr");
+        row?.remove();
+      }
+    }
+
+    function onMethodChange() {
+      const method = httpMethodSelect.value;
+      payloadGroup.style.display = ["POST", "PUT", "PATCH"].includes(method) ? "block" : "none";
+    }
+
+    function gatherStages() {
+      return Array.from(stagesBody.querySelectorAll("tr")).map(row => {
+        const duration = row.querySelector('input[name="stageDuration"]').value.trim();
+        const targetValue = row.querySelector('input[name="stageTarget"]').value;
+        return {
+          duration: duration || "30s",
+          target: Number.parseInt(targetValue, 10) || 0
+        };
+      }).filter(stage => !Number.isNaN(stage.target));
+    }
+
+    function gatherKeyValues(container) {
+      const entries = Array.from(container.querySelectorAll("tr")).map(row => {
+        const key = row.querySelector('input[name="rowKey"]').value.trim();
+        const value = row.querySelector('input[name="rowValue"]').value.trim();
+        if (!key) {
+          return null;
+        }
+
+        return [key, value];
+      }).filter(Boolean);
+
+      if (!entries.length) {
+        return null;
+      }
+
+      return Object.fromEntries(entries);
+    }
+
+    async function generateScript() {
+      clearStatus();
+      const payload = buildRequestPayload();
+
+      try {
+        const response = await fetch("/api/k6/script", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || "Failed to generate script");
+        }
+
+        const result = await response.json();
+        scriptOutput.value = result.script || "";
+        commandOutput.value = result.command || "";
+        fileNameSpan.textContent = result.suggestedFileName || "k6-test.js";
+        setStatus("Script generated successfully");
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    }
+
+    function buildRequestPayload() {
+      const formData = new FormData(configForm);
+      const method = formData.get("httpMethod") ?? "GET";
+      const payload = {
+        testName: formData.get("testName")?.toString().trim(),
+        targetUrl: formData.get("targetUrl")?.toString().trim(),
+        httpMethod: method,
+        duration: formData.get("duration")?.toString().trim(),
+        virtualUsers: Number.parseInt(formData.get("virtualUsers"), 10) || 1,
+        stages: gatherStages(),
+        sleepSeconds: Number.parseInt(formData.get("sleepSeconds"), 10) || 0,
+        headers: gatherKeyValues(headersBody),
+        payload: formData.get("payload")?.toString() ?? "",
+        p95ThresholdMs: parseOptionalNumber(formData.get("p95Threshold")),
+        tags: gatherKeyValues(tagsBody),
+        checkResponse: formData.get("checkResponse") === "on"
+      };
+
+      if (!["POST", "PUT", "PATCH"].includes(method)) {
+        payload.payload = "";
+      }
+
+      if (payload.stages.length === 0) {
+        payload.stages = [];
+      }
+
+      return payload;
+    }
+
+    function parseOptionalNumber(value) {
+      if (value == null || value === "") {
+        return null;
+      }
+
+      const parsed = Number.parseInt(value, 10);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    function copyToClipboard(text, successMessage) {
+      if (!text) {
+        setStatus("Nothing to copy", true);
+        return;
+      }
+
+      navigator.clipboard.writeText(text)
+        .then(() => setStatus(successMessage))
+        .catch(() => setStatus("Failed to copy", true));
+    }
+
+    function downloadScript() {
+      const script = scriptOutput.value;
+      const fileName = fileNameSpan.textContent || "k6-script.js";
+      if (!script) {
+        setStatus("Generate a script first", true);
+        return;
+      }
+
+      const blob = new Blob([script], { type: "text/javascript;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setStatus("Download started");
+    }
+
+    async function startRun() {
+      if (currentRunController) {
+        setStatus("k6 test already running");
+        return;
+      }
+
+      clearStatus();
+      const payload = buildRequestPayload();
+      currentRunController = new AbortController();
+      runOutput.value = "";
+      setRunningState(true);
+      setStatus("Starting k6 test...");
+
+      try {
+        const response = await fetch("/api/k6/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: currentRunController.signal
+        });
+
+        if (!response.ok) {
+          const raw = await response.text().catch(() => "");
+          let message = "Failed to start k6 test";
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              message = parsed?.error || message;
+            } catch {
+              message = raw;
+            }
+          }
+
+          throw new Error(message);
+        }
+
+        if (!response.body) {
+          throw new Error("Streaming not supported in this browser.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+
+          if (value) {
+            const chunk = decoder.decode(value, { stream: true });
+            appendRunOutput(chunk);
+          }
+        }
+
+        const remaining = decoder.decode();
+        if (remaining) {
+          appendRunOutput(remaining);
+        }
+
+        setStatus("k6 test completed");
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          appendRunOutput("[cancelled] Request aborted by user.\n");
+          setStatus("k6 test cancelled");
+        } else if (error instanceof Error) {
+          appendRunOutput(`[error] ${error.message}\n`);
+          setStatus(error.message, true);
+        } else {
+          appendRunOutput("[error] Unexpected failure during k6 execution.\n");
+          setStatus("Unexpected failure during k6 execution", true);
+        }
+      } finally {
+        currentRunController = null;
+        setRunningState(false);
+      }
+    }
+
+    function cancelRun() {
+      if (currentRunController) {
+        currentRunController.abort();
+      }
+    }
+
+    function appendRunOutput(text) {
+      if (!text) {
+        return;
+      }
+
+      runOutput.value += text;
+      runOutput.scrollTop = runOutput.scrollHeight;
+    }
+
+    function setRunningState(isRunning) {
+      runBtn.disabled = isRunning;
+      runBtn.textContent = isRunning ? "Running..." : "Run with k6";
+      cancelRunBtn.disabled = !isRunning;
+      cancelRunBtn.style.visibility = isRunning ? "visible" : "hidden";
+    }
+
+    function setStatus(message, isError = false) {
+      statusMessage.textContent = message;
+      statusMessage.classList.toggle("error", isError);
+      if (!message) {
+        statusMessage.textContent = "";
+      }
+    }
+
+    function clearStatus() {
+      setStatus("");
+    }
+
+    function resetForm() {
+      configForm.reset();
+      document.getElementById("testName").value = defaults.testName;
+      document.getElementById("targetUrl").value = defaults.targetUrl;
+      document.getElementById("httpMethod").value = defaults.httpMethod;
+      document.getElementById("duration").value = defaults.duration;
+      document.getElementById("virtualUsers").value = defaults.virtualUsers;
+      document.getElementById("sleepSeconds").value = defaults.sleepSeconds;
+      document.getElementById("p95Threshold").value = defaults.p95ThresholdMs ?? "";
+      document.getElementById("payload").value = defaults.payload;
+      document.getElementById("checkResponse").checked = defaults.checkResponse;
+
+      stagesBody.innerHTML = "";
+      defaults.stages.forEach(addStageRow);
+
+      headersBody.innerHTML = "";
+      defaults.headers.forEach(header => addKeyValueRow(headersBody, header));
+
+      tagsBody.innerHTML = "";
+      defaults.tags.forEach(tag => addKeyValueRow(tagsBody, tag));
+
+      onMethodChange();
+      scriptOutput.value = "";
+      commandOutput.value = "";
+      fileNameSpan.textContent = "—";
+      runOutput.value = "";
+      if (currentRunController) {
+        currentRunController.abort();
+      }
+      setRunningState(false);
+      clearStatus();
+    }
+
+    resetForm();
+  </script>
+</body>
+</html>
