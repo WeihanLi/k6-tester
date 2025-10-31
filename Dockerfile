@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1
 
-ARG TARGETARCH
-
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG TARGETARCH
 WORKDIR /src
 
 COPY src/k6-tester/k6-tester.csproj ./src/k6-tester/
