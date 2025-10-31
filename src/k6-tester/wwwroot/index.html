@@ -247,6 +247,30 @@
       color: #ff8a8a;
     }
 
+    .copy-tooltip {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: rgba(11, 95, 255, 0.95);
+      color: #fff;
+      padding: 0.65rem 1.1rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      box-shadow: 0 10px 25px -15px rgba(11, 95, 255, 0.75);
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .copy-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     @media (max-width: 640px) {
       header {
         font-size: 1.25rem;
@@ -696,7 +720,10 @@
       }
 
       navigator.clipboard.writeText(text)
-        .then(() => setStatus(successMessage))
+        .then(() => {
+          setStatus(successMessage);
+          showCopyTooltip();
+        })
         .catch(() => setStatus("Failed to copy", true));
     }
 
@@ -843,6 +870,24 @@
 
     function clearStatus() {
       setStatus("");
+    }
+
+    function showCopyTooltip() {
+      document.querySelectorAll(".copy-tooltip").forEach(node => node.remove());
+
+      const tooltip = document.createElement("div");
+      tooltip.className = "copy-tooltip";
+      tooltip.textContent = "Copied!";
+      document.body.appendChild(tooltip);
+
+      requestAnimationFrame(() => {
+        tooltip.classList.add("visible");
+      });
+
+      setTimeout(() => {
+        tooltip.classList.remove("visible");
+        tooltip.addEventListener("transitionend", () => tooltip.remove(), { once: true });
+      }, 1200);
     }
 
     function resetForm() {
