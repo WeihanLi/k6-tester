@@ -109,6 +109,43 @@
       max-width: 120px;
     }
 
+    .mode-toggle {
+      display: inline-flex;
+      align-items: center;
+      background: #232323;
+      border: 1px solid #3c3c3c;
+      border-radius: 999px;
+      padding: 0.25rem;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .mode-toggle button {
+      background: transparent;
+      border-radius: 999px;
+      border: none;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: inherit;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .mode-toggle button.active {
+      background: #0b5fff;
+      color: #fff;
+      box-shadow: 0 12px 22px -16px rgba(11, 95, 255, 0.7);
+    }
+
+    .mode-toggle button:not(.active):hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .is-hidden {
+      display: none !important;
+    }
+
     button {
       border: none;
       border-radius: 8px;
@@ -202,7 +239,7 @@
     .code-editor-placeholder {
       position: absolute;
       top: 0.85rem;
-      left: 1rem;
+      left: 3rem;
       color: #858585;
       font-size: 0.85rem;
       letter-spacing: 0.02em;
@@ -286,8 +323,12 @@
 <body>
   <header>k6 tester</header>
   <main>
+    <div class="mode-toggle" role="group" aria-label="Script mode">
+      <button type="button" id="builderModeBtn" class="active">Use builder</button>
+      <button type="button" id="manualModeBtn">Use existing script</button>
+    </div>
     <div class="layout">
-      <section class="card">
+      <section class="card" id="builderCard">
         <h2>Test Configuration</h2>
         <form id="configForm">
           <div class="fields">
@@ -408,12 +449,13 @@
         </form>
       </section>
 
-      <section class="card output-area">
+      <section class="card output-area" id="scriptCard">
         <h2>Script preview</h2>
         <div class="code-editor-container">
           <div id="scriptEditor" class="code-editor" role="textbox" aria-label="Generated k6 script"></div>
           <div id="scriptPlaceholder" class="code-editor-placeholder">Configure the form and click Generate script.</div>
         </div>
+        <div id="manualModeHelper" class="helper is-hidden">Builder UI is hidden. Paste or edit your existing k6 script above.</div>
         <textarea id="scriptOutput" placeholder="Configure the form and click Generate script." hidden></textarea>
         <div class="helper">
           Suggested file name: <span id="fileName">—</span>
@@ -491,16 +533,26 @@
     const scriptOutput = document.getElementById("scriptOutput");
     const scriptPlaceholder = document.getElementById("scriptPlaceholder");
     const scriptEditorHost = document.getElementById("scriptEditor");
+    const builderModeBtn = document.getElementById("builderModeBtn");
+    const manualModeBtn = document.getElementById("manualModeBtn");
+    const builderCard = document.getElementById("builderCard");
+    const manualModeHelper = document.getElementById("manualModeHelper");
     const commandOutput = document.getElementById("commandOutput");
     const statusMessage = document.getElementById("statusMessage");
     const fileNameSpan = document.getElementById("fileName");
     const runBtn = document.getElementById("runBtn");
     const cancelRunBtn = document.getElementById("cancelRunBtn");
     const runOutput = document.getElementById("runOutput");
+    const builderPlaceholderText = (scriptPlaceholder?.textContent || scriptOutput?.placeholder || "").trim() || "Configure the form and click Generate script.";
+    const manualPlaceholderText = "Paste or type your existing k6 script here.";
     let currentRunController = null;
     let scriptEditor = null;
+    let currentMode = "builder";
 
     initializeEditor();
+
+    builderModeBtn?.addEventListener("click", () => switchMode("builder"));
+    manualModeBtn?.addEventListener("click", () => switchMode("manual"));
 
     document.getElementById("addStageBtn").addEventListener("click", () => addStageRow());
     document.getElementById("clearStagesBtn").addEventListener("click", () => {
@@ -521,6 +573,10 @@
 
     configForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (currentMode !== "builder") {
+        setStatus("Switch back to builder mode to generate a script.", true);
+        return;
+      }
       await generateScript();
     });
 
@@ -590,6 +646,57 @@
 
       const hasContent = Boolean(content && content.trim().length > 0);
       scriptPlaceholder.style.display = hasContent ? "none" : "block";
+    }
+
+    function switchMode(mode, options = {}) {
+      const normalizedMode = mode === "manual" ? "manual" : "builder";
+      const force = Boolean(options.force);
+      if (!force && normalizedMode === currentMode) {
+        if (normalizedMode === "manual") {
+          focusScriptInput();
+        }
+        return;
+      }
+
+      currentMode = normalizedMode;
+      const usingBuilder = normalizedMode === "builder";
+
+      builderModeBtn?.classList.toggle("active", usingBuilder);
+      manualModeBtn?.classList.toggle("active", !usingBuilder);
+      builderCard?.classList.toggle("is-hidden", !usingBuilder);
+      manualModeHelper?.classList.toggle("is-hidden", usingBuilder);
+
+      const placeholderText = usingBuilder ? builderPlaceholderText : manualPlaceholderText;
+      if (scriptPlaceholder) {
+        scriptPlaceholder.textContent = placeholderText;
+      }
+      if (scriptOutput) {
+        scriptOutput.placeholder = placeholderText;
+      }
+      if (scriptEditorHost) {
+        const ariaLabel = usingBuilder ? "Generated k6 script" : "Existing k6 script";
+        scriptEditorHost.setAttribute("aria-label", ariaLabel);
+      }
+
+      toggleScriptPlaceholder(getScriptContent());
+
+      if (!usingBuilder) {
+        if (!fileNameSpan.textContent || fileNameSpan.textContent.trim() === "—") {
+          fileNameSpan.textContent = "manual-script.js";
+        }
+        commandOutput.value = "";
+        setStatus("");
+        focusScriptInput();
+      }
+    }
+
+    function focusScriptInput() {
+      if (scriptEditor) {
+        scriptEditor.focus();
+        scriptEditor.navigateFileEnd();
+      } else {
+        scriptOutput?.focus();
+      }
     }
 
     function addStageRow(stage = { duration: "30s", target: 10 }) {
@@ -923,6 +1030,7 @@
       clearStatus();
     }
 
+    switchMode("builder", { force: true });
     resetForm();
   </script>
 </body>
