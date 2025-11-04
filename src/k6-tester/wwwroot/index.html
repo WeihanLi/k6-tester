@@ -53,6 +53,52 @@
       box-shadow: 0 20px 45px -30px rgba(0, 0, 0, 0.65);
     }
 
+    #builderCard {
+      padding: 1rem 1.1rem;
+    }
+
+    #builderCard form {
+      gap: 0.75rem;
+    }
+
+    #builderCard h2 {
+      margin-bottom: 0.75rem;
+    }
+
+    #builderCard .fields {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.5rem 0.65rem;
+    }
+
+    #builderCard input[type="text"],
+    #builderCard input[type="number"],
+    #builderCard select,
+    #builderCard textarea {
+      padding: 0.5rem 0.65rem;
+    }
+
+    #builderCard textarea {
+      min-height: 110px;
+    }
+
+    #builderCard table th,
+    #builderCard table td {
+      padding: 0.4rem 0.6rem;
+    }
+
+    #builderCard .helper {
+      margin-top: 0.25rem;
+    }
+
+    #builderCard .actions {
+      gap: 0.5rem;
+    }
+
+    #builderCard button {
+      padding: 0.55rem 1rem;
+      font-size: 0.85rem;
+    }
+
     h2 {
       margin: 0 0 1rem;
       font-size: 1.1rem;
@@ -324,8 +370,8 @@
   <header>k6 tester</header>
   <main>
     <div class="mode-toggle" role="group" aria-label="Script mode">
-      <button type="button" id="builderModeBtn" class="active">Use builder</button>
-      <button type="button" id="manualModeBtn">Use existing script</button>
+      <button type="button" id="builderModeBtn" class="active">Builder</button>
+      <button type="button" id="manualModeBtn">Script</button>
     </div>
     <div class="layout">
       <section class="card" id="builderCard">
@@ -455,7 +501,7 @@
           <div id="scriptEditor" class="code-editor" role="textbox" aria-label="Generated k6 script"></div>
           <div id="scriptPlaceholder" class="code-editor-placeholder">Configure the form and click Generate script.</div>
         </div>
-        <div id="manualModeHelper" class="helper is-hidden">Builder UI is hidden. Paste or edit your existing k6 script above.</div>
+        <div id="manualModeHelper" class="helper is-hidden">Script tab active. Review or edit your k6 script above.</div>
         <textarea id="scriptOutput" placeholder="Configure the form and click Generate script." hidden></textarea>
         <div class="helper">
           Suggested file name: <span id="fileName">—</span>
@@ -537,6 +583,7 @@
     const builderModeBtn = document.getElementById("builderModeBtn");
     const manualModeBtn = document.getElementById("manualModeBtn");
     const builderCard = document.getElementById("builderCard");
+    const scriptCard = document.getElementById("scriptCard");
     const manualModeHelper = document.getElementById("manualModeHelper");
     const commandOutput = document.getElementById("commandOutput");
     const statusMessage = document.getElementById("statusMessage");
@@ -546,7 +593,7 @@
     const runOutput = document.getElementById("runOutput");
     const shareLinkBtn = document.getElementById("shareLinkBtn");
     const builderPlaceholderText = (scriptPlaceholder?.textContent || scriptOutput?.placeholder || "").trim() || "Configure the form and click Generate script.";
-    const manualPlaceholderText = "Paste or type your existing k6 script here.";
+    const manualPlaceholderText = "Review or edit the k6 script here.";
     let currentRunController = null;
     let scriptEditor = null;
     let currentMode = "builder";
@@ -577,7 +624,7 @@
     configForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (currentMode !== "builder") {
-        setStatus("Switch back to builder mode to generate a script.", true);
+        setStatus("Switch back to the Builder tab to generate a script.", true);
         return;
       }
       await generateScript();
@@ -654,9 +701,11 @@
     function switchMode(mode, options = {}) {
       const normalizedMode = mode === "manual" ? "manual" : "builder";
       const force = Boolean(options.force);
+      const preserveOutputs = Boolean(options.preserveOutputs);
+      const focusPlacement = options.focusPlacement ?? "end";
       if (!force && normalizedMode === currentMode) {
         if (normalizedMode === "manual") {
-          focusScriptInput();
+          focusScriptInput(focusPlacement);
         }
         return;
       }
@@ -667,6 +716,7 @@
       builderModeBtn?.classList.toggle("active", usingBuilder);
       manualModeBtn?.classList.toggle("active", !usingBuilder);
       builderCard?.classList.toggle("is-hidden", !usingBuilder);
+      scriptCard?.classList.toggle("is-hidden", usingBuilder);
       manualModeHelper?.classList.toggle("is-hidden", usingBuilder);
 
       const placeholderText = usingBuilder ? builderPlaceholderText : manualPlaceholderText;
@@ -684,21 +734,40 @@
       toggleScriptPlaceholder(getScriptContent());
 
       if (!usingBuilder) {
-        if (!fileNameSpan.textContent || fileNameSpan.textContent.trim() === "—") {
-          fileNameSpan.textContent = "manual-script.js";
+        if (!preserveOutputs) {
+          if (!fileNameSpan.textContent || fileNameSpan.textContent.trim() === "—") {
+            fileNameSpan.textContent = "manual-script.js";
+          }
+
+          if (!getScriptContent().trim()) {
+            commandOutput.value = "";
+          }
+
+          setStatus("");
         }
-        commandOutput.value = "";
-        setStatus("");
-        focusScriptInput();
+
+        focusScriptInput(focusPlacement);
       }
     }
 
-    function focusScriptInput() {
+    function focusScriptInput(placement = "end") {
       if (scriptEditor) {
         scriptEditor.focus();
-        scriptEditor.navigateFileEnd();
+        if (placement === "start") {
+          scriptEditor.navigateFileStart();
+          scriptEditor.selection.clearSelection();
+          scriptEditor.scrollToLine(0, true, false, () => {});
+        } else if (placement === "none") {
+          scriptEditor.selection.clearSelection();
+        } else {
+          scriptEditor.navigateFileEnd();
+          scriptEditor.selection.clearSelection();
+        }
       } else {
         scriptOutput?.focus();
+        if (placement === "start" && typeof scriptOutput?.setSelectionRange === "function") {
+          scriptOutput.setSelectionRange(0, 0);
+        }
       }
     }
 
@@ -780,6 +849,7 @@
         commandOutput.value = result.command || "";
         fileNameSpan.textContent = result.suggestedFileName || "k6-test.js";
         setStatus("Script generated successfully");
+        switchMode("manual", { preserveOutputs: true, focusPlacement: "start" });
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -1099,7 +1169,7 @@
       }
 
       setScriptContent(script);
-      switchMode("manual", { force: true });
+      switchMode("manual", { force: true, focusPlacement: "start" });
       fileNameSpan.textContent = "shared-script.js";
       commandOutput.value = "k6 run shared-script.js";
       setStatus("Loaded script from share link");
