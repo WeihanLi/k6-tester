@@ -595,6 +595,32 @@
     let currentRunController = null;
     let scriptEditor = null;
     let currentMode = "builder";
+    const appBaseUrl = (() => {
+      const { origin, pathname } = window.location;
+      const normalizedPath = (() => {
+        if (!pathname || pathname === "/") {
+          return "/";
+        }
+        if (pathname.endsWith("/")) {
+          return pathname.replace(/\/+$/, "/");
+        }
+
+        const lastSegment = pathname.substring(pathname.lastIndexOf("/") + 1);
+        if (lastSegment.includes(".")) {
+          const base = pathname.substring(0, pathname.lastIndexOf("/"));
+          return base ? `${base.replace(/\/+$/, "")}/` : "/";
+        }
+
+        return `${pathname}/`;
+      })();
+
+      return `${origin}${normalizedPath}`;
+    })();
+
+    function buildApiUrl(relativePath) {
+      const trimmed = String(relativePath || "").replace(/^\/+/, "");
+      return new URL(trimmed, appBaseUrl).toString();
+    }
 
     initializeEditor();
 
@@ -831,7 +857,7 @@
       const payload = buildConfigPayload();
 
       try {
-        const response = await fetch("/api/k6/script", {
+        const response = await fetch(buildApiUrl("api/k6/script"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -1004,7 +1030,7 @@
       setStatus("Starting k6 test...");
 
       try {
-        const response = await fetch("/api/k6/run", {
+        const response = await fetch(buildApiUrl("api/k6/run"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
