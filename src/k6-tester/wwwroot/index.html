@@ -163,7 +163,6 @@
       border-radius: 999px;
       padding: 0.25rem;
       gap: 0.25rem;
-      margin-bottom: 1rem;
     }
 
     .mode-toggle button {
@@ -494,9 +493,8 @@
           </div>
         </form>
       </section>
-
       <section class="card output-area" id="scriptCard">
-        <h2>Script preview</h2>
+        <h2>Test Script</h2>
         <div class="code-editor-container">
           <div id="scriptEditor" class="code-editor" role="textbox" aria-label="Generated k6 script"></div>
           <div id="scriptPlaceholder" class="code-editor-placeholder">Configure the form and click Generate script.</div>
@@ -548,23 +546,23 @@
   <script>
     const defaults = {
       testName: "homepage_smoke",
-      targetUrl: "https://test.k6.io",
+      targetUrl: "https://k6.io",
       httpMethod: "GET",
-      duration: "2m",
-      virtualUsers: 10,
+      duration: "10s",
+      virtualUsers: 1,
       stages: [
-        { duration: "30s", target: 5 },
-        { duration: "1m", target: 20 },
-        { duration: "30s", target: 0 }
+        // { duration: "30s", target: 5 },
+        // { duration: "1m", target: 20 },
+        // { duration: "30s", target: 0 }
       ],
-      sleepSeconds: 1,
+      sleepSeconds: 0,
       headers: [
         { key: "Content-Type", value: "application/json" }
       ],
       payload: "",
       p95ThresholdMs: 500,
       tags: [
-        { key: "environment", value: "test" }
+        // { key: "environment", value: "test" }
       ],
       checkResponse: true
     };
