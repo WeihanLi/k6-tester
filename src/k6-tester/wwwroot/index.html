@@ -47,6 +47,7 @@
     }
 
     .card {
+      position: relative;
       background: #2b2b2b;
       border-radius: 12px;
       padding: 1.25rem;
@@ -288,7 +289,7 @@
       color: #858585;
       font-size: 0.85rem;
       letter-spacing: 0.02em;
-      pointer-events: none;
+      pointer-events: auto;
       user-select: none;
     }
 
@@ -353,6 +354,43 @@
       transform: translateY(0);
     }
 
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.75rem;
+      background: rgba(18, 18, 18, 0.85);
+      border-radius: inherit;
+      color: #fff;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      z-index: 5;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .loading-overlay .spinner {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      border-top-color: #0b5fff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
     @media (max-width: 640px) {
       header {
         font-size: 1.25rem;
@@ -374,6 +412,10 @@
     </div>
     <div class="layout">
       <section class="card" id="builderCard">
+        <div id="builderLoading" class="loading-overlay is-hidden" role="status" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <span>Generating script…</span>
+        </div>
         <h2>Test Configuration</h2>
         <form id="configForm">
           <div class="fields">
@@ -581,6 +623,7 @@
     const builderModeBtn = document.getElementById("builderModeBtn");
     const manualModeBtn = document.getElementById("manualModeBtn");
     const builderCard = document.getElementById("builderCard");
+    const builderLoadingOverlay = document.getElementById("builderLoading");
     const scriptCard = document.getElementById("scriptCard");
     const manualModeHelper = document.getElementById("manualModeHelper");
     const commandOutput = document.getElementById("commandOutput");
@@ -592,6 +635,8 @@
     const shareLinkBtn = document.getElementById("shareLinkBtn");
     const builderPlaceholderText = (scriptPlaceholder?.textContent || scriptOutput?.placeholder || "").trim() || "Configure the form and click Generate script.";
     const manualPlaceholderText = "Review or edit the k6 script here.";
+    const generateButton = configForm?.querySelector('button[type=\"submit\"]');
+    const generateButtonDefaultText = generateButton?.textContent ?? "Generate script";
     let currentRunController = null;
     let scriptEditor = null;
     let currentMode = "builder";
@@ -852,9 +897,19 @@
       return Object.fromEntries(entries);
     }
 
+    function setGeneratingState(isGenerating) {
+      builderCard?.setAttribute("aria-busy", String(isGenerating));
+      builderLoadingOverlay?.classList.toggle("is-hidden", !isGenerating);
+      if (generateButton) {
+        generateButton.disabled = isGenerating;
+        generateButton.textContent = isGenerating ? "Generating..." : generateButtonDefaultText;
+      }
+    }
+
     async function generateScript() {
       clearStatus();
       const payload = buildConfigPayload();
+      setGeneratingState(true);
 
       try {
         const response = await fetch(buildApiUrl("api/k6/script"), {
@@ -875,7 +930,10 @@
         setStatus("Script generated successfully");
         switchMode("manual", { preserveOutputs: true, focusPlacement: "start" });
       } catch (error) {
-        setStatus(error.message, true);
+        const message = error instanceof Error ? error.message : "Failed to generate script";
+        setStatus(message, true);
+      } finally {
+        setGeneratingState(false);
       }
     }
 
