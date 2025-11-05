@@ -391,6 +391,72 @@
       }
     }
 
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-header h2 {
+      margin: 0;
+    }
+
+    .script-layout {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+
+    .script-layout.is-split {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    }
+
+    @media (max-width: 900px) {
+      .script-layout.is-split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .script-pane,
+    .output-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .command-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      margin-top: 0.75rem;
+    }
+
+    .script-pane .actions {
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .output-pane label {
+      font-weight: 600;
+    }
+
+    .output-pane textarea {
+      flex: 1 1 auto;
+    }
+
+    .script-layout.is-split .output-pane textarea {
+      min-height: 0;
+      height: 100%;
+    }
+
+    .script-layout.is-split .output-pane {
+      min-width: 280px;
+    }
     @media (max-width: 640px) {
       header {
         font-size: 1.25rem;
@@ -536,31 +602,37 @@
         </form>
       </section>
       <section class="card output-area" id="scriptCard">
-        <h2>Test Script</h2>
-        <div class="code-editor-container">
-          <div id="scriptEditor" class="code-editor" role="textbox" aria-label="Generated k6 script"></div>
-          <div id="scriptPlaceholder" class="code-editor-placeholder">Configure the form and click Generate script.</div>
+        <div class="card-header">
+          <h2>Test Script</h2>
+          <button type="button" class="secondary" id="toggleScriptLayoutBtn" aria-pressed="false">Use split view</button>
         </div>
-        <div id="manualModeHelper" class="helper is-hidden">Script tab active. Review or edit your k6 script above.</div>
-        <textarea id="scriptOutput" placeholder="Configure the form and click Generate script." hidden></textarea>
-        <div class="helper">
-          Suggested file name: <span id="fileName">—</span>
-        </div>
-        <div style="margin-top: 0.75rem;">
-          <label for="commandOutput">k6 command</label>
-          <input type="text" id="commandOutput" readonly placeholder="k6 run <fileName>.js">
-        </div>
-        <div class="actions" style="margin-top: 0.75rem;">
-          <button type="button" class="primary" id="runBtn">Run with k6</button>
-          <button type="button" class="danger" id="cancelRunBtn" style="visibility: hidden;" disabled>Cancel run</button>
-          <button type="button" class="secondary" id="copyScriptBtn">Copy script</button>
-          <button type="button" class="secondary" id="copyCommandBtn">Copy command</button>
-          <button type="button" class="secondary" id="shareLinkBtn">Share link</button>
-          <button type="button" class="secondary" id="downloadBtn">Download script</button>
-        </div>
-        <div style="margin-top: 0.75rem;">
-          <label for="runOutput">k6 output</label>
-          <textarea id="runOutput" readonly placeholder="Run the test to view live k6 output."></textarea>
+        <div class="script-layout" id="scriptLayout">
+          <div class="script-pane">
+            <div class="code-editor-container">
+              <div id="scriptEditor" class="code-editor" role="textbox" aria-label="Generated k6 script"></div>
+              <div id="scriptPlaceholder" class="code-editor-placeholder">Configure the form and click Generate script.</div>
+            </div>
+            <div id="manualModeHelper" class="helper is-hidden">Script tab active. Review or edit your k6 script above.</div>
+            <textarea id="scriptOutput" placeholder="Configure the form and click Generate script." hidden></textarea>
+            <div class="helper">
+              Suggested file name: <span id="fileName">—</span>
+            </div>
+            <div class="command-block">
+              <label for="commandOutput">k6 command</label>
+              <input type="text" id="commandOutput" readonly placeholder="k6 run <fileName>.js">
+            </div>
+            <div class="actions">
+              <button type="button" class="primary" id="runBtn">Run with k6</button>
+              <button type="button" class="danger" id="cancelRunBtn" style="visibility: hidden;" disabled>Cancel run</button>
+              <button type="button" class="secondary" id="copyScriptBtn">Copy script</button>
+              <button type="button" class="secondary" id="copyCommandBtn">Copy command</button>
+              <button type="button" class="secondary" id="shareLinkBtn">Share link</button>
+              <button type="button" class="secondary" id="downloadBtn">Download script</button>
+            </div>
+          </div>
+          <div class="output-pane">
+            <textarea id="runOutput" readonly placeholder="Run the test to view live k6 output."></textarea>
+          </div>
         </div>
         <div id="statusMessage" class="status" style="margin-top: 0.75rem;"></div>
       </section>
@@ -633,13 +705,17 @@
     const cancelRunBtn = document.getElementById("cancelRunBtn");
     const runOutput = document.getElementById("runOutput");
     const shareLinkBtn = document.getElementById("shareLinkBtn");
+    const toggleScriptLayoutBtn = document.getElementById("toggleScriptLayoutBtn");
+    const scriptLayoutContainer = document.getElementById("scriptLayout");
     const builderPlaceholderText = (scriptPlaceholder?.textContent || scriptOutput?.placeholder || "").trim() || "Configure the form and click Generate script.";
     const manualPlaceholderText = "Review or edit the k6 script here.";
     const generateButton = configForm?.querySelector('button[type=\"submit\"]');
     const generateButtonDefaultText = generateButton?.textContent ?? "Generate script";
+    const scriptLayoutPreferenceKey = "k6tester-script-layout";
     let currentRunController = null;
     let scriptEditor = null;
     let currentMode = "builder";
+    let isSplitLayout = false;
     const appBaseUrl = (() => {
       const { origin, pathname } = window.location;
       const normalizedPath = (() => {
@@ -668,9 +744,11 @@
     }
 
     initializeEditor();
+    restoreScriptLayoutPreference();
 
     builderModeBtn?.addEventListener("click", () => switchMode("builder"));
     manualModeBtn?.addEventListener("click", () => switchMode("manual"));
+    toggleScriptLayoutBtn?.addEventListener("click", () => applyScriptLayout(!isSplitLayout));
 
     document.getElementById("addStageBtn").addEventListener("click", () => addStageRow());
     document.getElementById("clearStagesBtn").addEventListener("click", () => {
@@ -895,6 +973,35 @@
       }
 
       return Object.fromEntries(entries);
+    }
+
+    function applyScriptLayout(nextSplitState, { persist = true } = {}) {
+      isSplitLayout = Boolean(nextSplitState);
+      scriptLayoutContainer?.classList.toggle("is-split", isSplitLayout);
+      if (toggleScriptLayoutBtn) {
+        toggleScriptLayoutBtn.textContent = isSplitLayout ? "Use stacked view" : "Use split view";
+        toggleScriptLayoutBtn.setAttribute("aria-pressed", String(isSplitLayout));
+      }
+      if (persist) {
+        try {
+          window.localStorage.setItem(scriptLayoutPreferenceKey, isSplitLayout ? "split" : "stacked");
+        } catch (error) {
+          // ignore storage errors
+        }
+      }
+    }
+
+    function restoreScriptLayoutPreference() {
+      try {
+        const saved = window.localStorage.getItem(scriptLayoutPreferenceKey);
+        if (saved === "split") {
+          applyScriptLayout(true, { persist: false });
+          return;
+        }
+      } catch (error) {
+        // ignore storage errors
+      }
+      applyScriptLayout(false, { persist: false });
     }
 
     function setGeneratingState(isGenerating) {
