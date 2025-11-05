@@ -81,7 +81,7 @@ public static class K6ScriptBuilder
         builder.AppendLine();
 
         var url = string.IsNullOrWhiteSpace(config.TargetUrl)
-            ? "https://test.k6.io"
+            ? "https://k6.io"
             : config.TargetUrl.Trim();
 
         builder.AppendLine($"const url = '{EscapeSingleQuotes(url)}';");

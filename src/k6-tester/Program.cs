@@ -45,14 +45,10 @@ public class Program
 
         app.MapPost("/api/k6/run", (HttpContext httpContext, K6RunRequest request) =>
         {
-            if (request?.Config is not { } config)
-            {
-                return Results.BadRequest(new { error = "config is required." });
-            }
 
-            if (!Uri.TryCreate(config.TargetUrl, UriKind.Absolute, out _))
+            if (string.IsNullOrWhiteSpace(request?.Script))
             {
-                return Results.BadRequest(new { error = "targetUrl must be an absolute URI." });
+                return Results.BadRequest(new { error = "Test script is required to run k6." });
             }
 
             httpContext.Response.Headers.CacheControl = "no-cache";
@@ -60,18 +56,9 @@ public class Program
             httpContext.Response.Headers["X-Accel-Buffering"] = "no";
 
             var cancellationToken = httpContext.RequestAborted;
-            var scriptResult = K6ScriptBuilder.BuildScript(config);
-            var scriptToRun = string.IsNullOrWhiteSpace(request.Script)
-                ? scriptResult.Script
-                : request.Script;
-
-            if (string.IsNullOrWhiteSpace(scriptToRun))
-            {
-                return Results.BadRequest(new { error = "Script content is required to run k6." });
-            }
-
+            var scriptToRun = request.Script;
             var fileName = string.IsNullOrWhiteSpace(request.FileName)
-                ? scriptResult.SuggestedFileName
+                ? "k6-script.js"
                 : request.FileName;
 
             return Results.Stream(async stream =>
