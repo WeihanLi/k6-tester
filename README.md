@@ -2,6 +2,10 @@
 
 `k6-tester` is a minimal ASP.NET Core application that helps you design, run, and share [k6](https://k6.io) load tests through a web UI. The single-page interface lets you configure scenarios, headers, payloads, thresholds, and tags, generate the matching JavaScript script, and execute it directly on the machine where the web app is running while streaming the k6 output back to the browser.
 
+![k6 script builder](./assets/builder.png)
+
+![k6 script editor/runner](./assets/script.png)
+
 ## Features
 
 - **Visual script builder** – fill out form fields for constant or ramping VU profiles, HTTP settings, headers, payloads, thresholds, and tags to generate a ready-to-run script.
