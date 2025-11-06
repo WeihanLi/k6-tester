@@ -3,31 +3,13 @@ using K6Tester.Models;
 using K6Tester.Services;
 
 var builder = WebApplication.CreateSlimBuilder(args);
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-    options.SerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
-});
-
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapGet("/health/live", () => Results.Ok())
-    .WithName("LivenessProbe")
-    .WithOpenApi()
-    .ShortCircuit()
-    ;
+    .ShortCircuit();
 
 app.MapPost("/api/k6/script", (K6LoadTestConfig config) =>
 {
@@ -38,9 +20,7 @@ app.MapPost("/api/k6/script", (K6LoadTestConfig config) =>
 
     var result = K6ScriptBuilder.BuildScript(config);
     return Results.Ok(result);
-})
-.WithName("GenerateK6Script")
-.WithOpenApi();
+});
 
 app.MapPost("/api/k6/run", (HttpContext httpContext, K6RunRequest request) =>
 {
@@ -63,9 +43,7 @@ app.MapPost("/api/k6/run", (HttpContext httpContext, K6RunRequest request) =>
     {
         await K6Runner.RunAsync(scriptToRun, fileName, stream, cancellationToken);
     }, "text/plain; charset=utf-8");
-})
-.WithName("RunK6Script")
-.WithOpenApi();
+});
 
 app.MapFallbackToFile("index.html");
 
