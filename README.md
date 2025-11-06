@@ -8,7 +8,6 @@
 - **Instant script download** – copy, download, or view the `k6 run` command for the generated script.
 - **One-click execution** – run the script via the local k6 CLI and monitor live stdout/stderr output in the UI (useful for demos or quick validation runs).
 - **REST API** – `/api/k6/script` returns JSON containing the generated JS script; `/api/k6/run` streams real-time execution output (text/plain).
-- **Unit tests** – xUnit specs cover core script generation behaviors.
 
 ## Project layout
 
@@ -28,7 +27,7 @@
 
 ## Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [k6 CLI](https://k6.io/docs/get-started/installation/) available on the machine/path where you run the app (optional but required for the **Run with k6** button to work).
 
 ## Getting started
