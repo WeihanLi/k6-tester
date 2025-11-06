@@ -802,6 +802,7 @@
     const generateButton = configForm?.querySelector('button[type=\"submit\"]');
     const generateButtonDefaultText = generateButton?.textContent ?? "Generate script";
     const scriptLayoutPreferenceKey = "k6tester-script-layout";
+    const scriptStorageKey = "k6tester-script";
     let currentRunController = null;
     let runOutputPartialLine = null;
     let runOutputShouldStickToBottom = true;
@@ -809,6 +810,7 @@
     let scriptEditor = null;
     let currentMode = "builder";
     let isSplitLayout = false;
+    let lastPersistedScript = "";
     const appBaseUrl = (() => {
       const { origin, pathname } = window.location;
       const normalizedPath = (() => {
@@ -834,6 +836,101 @@
     function buildApiUrl(relativePath) {
       const trimmed = String(relativePath || "").replace(/^\/+/, "");
       return new URL(trimmed, appBaseUrl).toString();
+    }
+
+    function persistScript(content) {
+      const value = typeof content === "string" ? content : "";
+      const trimmed = value.trim();
+      let storage = null;
+
+      try {
+        storage = window.localStorage;
+      } catch (error) {
+        return;
+      }
+
+      if (!storage) {
+        return;
+      }
+
+      if (!trimmed) {
+        clearStoredScript();
+        return;
+      }
+
+      if (value === lastPersistedScript) {
+        return;
+      }
+
+      try {
+        storage.setItem(scriptStorageKey, value);
+        lastPersistedScript = value;
+      } catch (error) {
+        // ignore storage errors
+      }
+    }
+
+    function readStoredScript() {
+      let storage = null;
+      try {
+        storage = window.localStorage;
+      } catch (error) {
+        return null;
+      }
+
+      if (!storage) {
+        return null;
+      }
+
+      try {
+        const saved = storage.getItem(scriptStorageKey);
+        if (!saved || !saved.trim()) {
+          lastPersistedScript = "";
+          return null;
+        }
+
+        lastPersistedScript = saved;
+        return saved;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function clearStoredScript() {
+      let storage = null;
+      try {
+        storage = window.localStorage;
+      } catch (error) {
+        lastPersistedScript = "";
+        return;
+      }
+
+      if (!storage) {
+        lastPersistedScript = "";
+        return;
+      }
+
+      try {
+        storage.removeItem(scriptStorageKey);
+      } catch (error) {
+        // ignore storage errors
+      }
+
+      lastPersistedScript = "";
+    }
+
+    function restoreScriptFromStorage() {
+      const stored = readStoredScript();
+      if (!stored) {
+        return;
+      }
+
+      setScriptContent(stored, { persist: false });
+      if (!fileNameSpan.textContent || fileNameSpan.textContent.trim() === "—") {
+        fileNameSpan.textContent = "manual-script.js";
+      }
+      switchMode("manual", { force: true, preserveOutputs: true, focusPlacement: "none" });
+      setStatus("Restored script from your last visit");
     }
 
     initializeEditor();
@@ -916,6 +1013,7 @@
           const value = scriptEditor.getValue();
           scriptOutput.value = value;
           toggleScriptPlaceholder(value);
+          persistScript(value);
         });
         const initialValue = scriptOutput.value || "";
         scriptEditor.setValue(initialValue, -1);
@@ -937,7 +1035,7 @@
       return scriptEditor ? scriptEditor.getValue() : scriptOutput.value;
     }
 
-    function setScriptContent(content) {
+    function setScriptContent(content, options = {}) {
       const value = content ?? "";
       if (scriptEditor) {
         scriptEditor.setValue(value, -1);
@@ -945,6 +1043,9 @@
       }
       scriptOutput.value = value;
       toggleScriptPlaceholder(value);
+      if (options.persist !== false) {
+        persistScript(value);
+      }
     }
 
     function toggleScriptPlaceholder(content) {
@@ -1287,6 +1388,7 @@
         return;
       }
 
+      persistScript(script);
       const payload = {
         script,
         fileName: fileNameSpan.textContent && fileNameSpan.textContent !== "—"
@@ -1601,7 +1703,16 @@
       }, 1200);
     }
 
-    function resetForm() {
+    function resetForm(arg) {
+      let preserveScriptStorage = false;
+      if (arg && typeof arg === "object") {
+        if (typeof arg.preventDefault === "function") {
+          arg.preventDefault();
+        } else if ("preserveScriptStorage" in arg) {
+          preserveScriptStorage = Boolean(arg.preserveScriptStorage);
+        }
+      }
+
       configForm.reset();
       document.getElementById("testName").value = defaults.testName;
       document.getElementById("targetUrl").value = defaults.targetUrl;
@@ -1623,7 +1734,7 @@
       defaults.tags.forEach(tag => addKeyValueRow(tagsBody, tag));
 
       onMethodChange();
-      setScriptContent("");
+      setScriptContent("", { persist: !preserveScriptStorage });
       fileNameSpan.textContent = "—";
       clearRunOutput();
       if (currentRunController) {
@@ -1653,7 +1764,8 @@
     }
 
     switchMode("builder", { force: true });
-    resetForm();
+    resetForm({ preserveScriptStorage: true });
+    restoreScriptFromStorage();
     applyScriptFromQuery();
   </script>
 </body>
