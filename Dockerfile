@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG TARGETARCH
 WORKDIR /src
 
@@ -10,7 +10,7 @@ RUN dotnet restore ./src/k6-tester/k6-tester.csproj -a $TARGETARCH
 COPY ./src/k6-tester/ ./src/k6-tester/
 RUN dotnet publish ./src/k6-tester/k6-tester.csproj -a $TARGETARCH -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 ARG TARGETARCH
