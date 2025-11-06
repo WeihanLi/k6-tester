@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 
-namespace k6_tester.Services;
+namespace K6Tester.Services;
 
 public static class K6Runner
 {

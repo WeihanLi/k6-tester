@@ -1,7 +1,7 @@
-using k6_tester.Models;
-using k6_tester.Services;
+using K6Tester.Models;
+using K6Tester.Services;
 
-namespace k6_tester.Tests;
+namespace K6Tester.Tests;
 
 public class K6ScriptBuilderTests
 {

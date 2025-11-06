@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using k6_tester.Models;
+using K6Tester.Models;
 
-namespace k6_tester.Services;
+namespace K6Tester.Services;
 
 public static class K6ScriptBuilder
 {

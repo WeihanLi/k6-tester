@@ -1,4 +1,4 @@
-namespace k6_tester.Models;
+namespace K6Tester.Models;
 
 public sealed class K6Stage
 {
