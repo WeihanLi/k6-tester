@@ -34,7 +34,7 @@
       flex-direction: column;
       gap: 1.5rem;
       padding: 1.5rem;
-      max-width: 1200px;
+      max-width: 1920px;
       margin: 0 auto;
       width: 100%;
       box-sizing: border-box;
@@ -688,7 +688,7 @@
       <section class="card output-area" id="scriptCard">
         <div class="card-header">
           <h2>Test Script</h2>
-          <button type="button" class="secondary" id="toggleScriptLayoutBtn" aria-pressed="false">Use split view</button>
+          <button type="button" class="secondary" id="toggleScriptLayoutBtn" aria-pressed="false">Split View</button>
         </div>
         <div class="script-layout" id="scriptLayout">
           <div class="script-pane">
@@ -715,8 +715,8 @@
           </div>
           <div class="output-pane">
             <div class="output-pane-header">
-              <span class="output-pane-title">Run Output</span>
-              <button type="button" class="secondary" id="runOutputFullscreenBtn" aria-pressed="false">Fullscreen output</button>
+              <span class="output-pane-title">Output</span>
+              <button type="button" class="secondary" id="runOutputFullscreenBtn" aria-pressed="false">FullScreen</button>
             </div>
             <div id="runOutputContainer" class="run-output-container">
               <div id="runOutput" class="run-output" role="log" aria-live="polite" aria-label="k6 run output" tabindex="0" data-placeholder="Run the test to view live k6 output."></div>
@@ -1086,7 +1086,7 @@
       isSplitLayout = Boolean(nextSplitState);
       scriptLayoutContainer?.classList.toggle("is-split", isSplitLayout);
       if (toggleScriptLayoutBtn) {
-        toggleScriptLayoutBtn.textContent = isSplitLayout ? "Use stacked view" : "Use split view";
+        toggleScriptLayoutBtn.textContent = isSplitLayout ? "Stacked View" : "Split View";
         toggleScriptLayoutBtn.setAttribute("aria-pressed", String(isSplitLayout));
       }
       if (persist) {
