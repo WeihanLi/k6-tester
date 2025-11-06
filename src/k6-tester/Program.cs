@@ -1,4 +1,3 @@
-using System.Text.Json;
 using K6Tester.Models;
 using K6Tester.Services;
 
@@ -9,7 +8,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapGet("/health/live", () => Results.Ok())
-    .ShortCircuit();
+    .ShortCircuit().DisableHttpMetrics();
 
 app.MapPost("/api/k6/script", (K6LoadTestConfig config) =>
 {
