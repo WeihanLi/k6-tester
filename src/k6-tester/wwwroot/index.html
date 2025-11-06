@@ -146,6 +146,49 @@
       font-family: "Consolas", "Fira Code", "Source Code Pro", monospace;
     }
 
+    .run-output {
+      width: 100%;
+      min-height: 140px;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid #3c3c3c;
+      background: #1f1f1f;
+      color: inherit;
+      box-sizing: border-box;
+      font-family: "Consolas", "Fira Code", "Source Code Pro", monospace;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .run-output:empty::before {
+      content: attr(data-placeholder);
+      opacity: 0.65;
+    }
+
+    .run-output .output-line {
+      margin: 0;
+      padding: 0.05rem 0;
+    }
+
+    .run-output .output-line:empty::before {
+      content: "\00a0";
+    }
+
+    .run-output .output-line--error {
+      background: rgba(255, 82, 82, 0.16);
+      border-left: 3px solid #ff5252;
+      padding-left: 0.5rem;
+      border-radius: 4px;
+      color: #ffb4b4;
+      font-weight: 500;
+    }
+
+    .run-output.run-output--has-error {
+      border-color: #ff5252;
+      box-shadow: 0 0 0 1px rgba(255, 82, 82, 0.35);
+    }
+
     .inline {
       display: flex;
       gap: 0.75rem;
@@ -445,13 +488,13 @@
       font-weight: 600;
     }
 
-    .output-pane textarea {
-      flex: 1 1 auto;
+    .output-pane .run-output {
+        flex: 1 1 auto;
     }
 
-    .script-layout.is-split .output-pane textarea {
-      min-height: 0;
-      height: 100%;
+    .script-layout.is-split .output-pane .run-output {
+        min-height: 0;
+        height: 100%;
     }
 
     .script-layout.is-split .output-pane {
@@ -630,7 +673,7 @@
             </div>
           </div>
           <div class="output-pane">
-            <textarea id="runOutput" readonly placeholder="Run the test to view live k6 output."></textarea>
+            <div id="runOutput" class="run-output" role="log" aria-live="polite" aria-label="k6 run output" tabindex="0" data-placeholder="Run the test to view live k6 output."></div>
           </div>
         </div>
         <div id="statusMessage" class="status" style="margin-top: 0.75rem;"></div>
@@ -711,6 +754,7 @@
     const generateButtonDefaultText = generateButton?.textContent ?? "Generate script";
     const scriptLayoutPreferenceKey = "k6tester-script-layout";
     let currentRunController = null;
+    let runOutputPartialLine = null;
     let scriptEditor = null;
     let currentMode = "builder";
     let isSplitLayout = false;
@@ -1180,7 +1224,7 @@
           : "k6-script.js"
       };
       currentRunController = new AbortController();
-      runOutput.value = "";
+      clearRunOutput();
       setRunningState(true);
       setStatus("Starting k6 test...");
 
@@ -1231,6 +1275,7 @@
           appendRunOutput(remaining);
         }
 
+        flushPendingRunOutputLine();
         setStatus("k6 test completed");
       } catch (error) {
         if (error?.name === "AbortError") {
@@ -1244,6 +1289,7 @@
           setStatus("Unexpected failure during k6 execution", true);
         }
       } finally {
+        flushPendingRunOutputLine();
         currentRunController = null;
         setRunningState(false);
       }
@@ -1255,13 +1301,85 @@
       }
     }
 
+    function isErrorLine(line) {
+      if (!line) {
+        return false;
+      }
+
+      const errorPattern = /^\[err\]/i;
+      return errorPattern.test(line);
+    }
+
+    // Ensure there is a pending line element to receive streamed content.
+    function ensureRunOutputPartialLine() {
+      if (!runOutputPartialLine) {
+        runOutputPartialLine = document.createElement("div");
+        runOutputPartialLine.className = "output-line output-line--partial";
+        runOutput.appendChild(runOutputPartialLine);
+      }
+    }
+
+    function finalizeCurrentRunOutputLine() {
+      if (!runOutputPartialLine) {
+        return;
+      }
+
+      runOutputPartialLine.classList.remove("output-line--partial");
+      const content = runOutputPartialLine.textContent;
+
+      if (isErrorLine(content)) {
+        runOutputPartialLine.classList.add("output-line--error");
+        runOutput.classList.add("run-output--has-error");
+      }
+
+      runOutputPartialLine = null;
+    }
+
+    // Append streamed k6 output, promoting each completed line into the log.
     function appendRunOutput(text) {
       if (!text) {
         return;
       }
 
-      runOutput.value += text;
+      let remaining = text;
+
+      while (remaining.length > 0) {
+        const newlineIndex = remaining.indexOf("\n");
+
+        if (newlineIndex === -1) {
+          ensureRunOutputPartialLine();
+          runOutputPartialLine.textContent += remaining.replace(/\r/g, "");
+          break;
+        }
+
+        let segment = remaining.slice(0, newlineIndex);
+        remaining = remaining.slice(newlineIndex + 1);
+
+        const cleanedSegment = segment.replace(/\r/g, "");
+
+        ensureRunOutputPartialLine();
+        runOutputPartialLine.textContent += cleanedSegment;
+        finalizeCurrentRunOutputLine();
+      }
+
       runOutput.scrollTop = runOutput.scrollHeight;
+    }
+
+    // Finalize any partial line when the stream closes.
+    function flushPendingRunOutputLine() {
+      if (!runOutputPartialLine) {
+        return;
+      }
+
+      finalizeCurrentRunOutputLine();
+      runOutput.scrollTop = runOutput.scrollHeight;
+    }
+
+    function clearRunOutput() {
+      runOutput.textContent = "";
+      runOutputPartialLine = null;
+      runOutput.classList.remove("run-output--has-error");
+      runOutput.scrollTop = 0;
     }
 
     function setRunningState(isRunning) {
@@ -1325,7 +1443,7 @@
       onMethodChange();
       setScriptContent("");
       fileNameSpan.textContent = "—";
-      runOutput.value = "";
+      clearRunOutput();
       if (currentRunController) {
         currentRunController.abort();
       }
