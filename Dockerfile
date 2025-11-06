@@ -23,7 +23,6 @@ RUN set -eux; \
     case "$TARGETARCH" in \
         amd64) k6_arch=amd64 ;; \
         arm64) k6_arch=arm64 ;; \
-        arm*) k6_arch=arm ;; \
         *) echo "Unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
     esac; \
     curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-${k6_arch}.tar.gz" -o /tmp/k6.tar.gz; \
