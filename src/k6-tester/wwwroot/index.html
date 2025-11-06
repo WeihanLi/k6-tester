@@ -20,7 +20,7 @@
     }
 
     header {
-      padding: 1.5rem 2rem;
+      padding: 0.4rem 0.8rem;
       background: #0b5fff;
       color: #fff;
       font-size: 1.5rem;
@@ -617,17 +617,16 @@
             <div class="helper">
               Suggested file name: <span id="fileName">—</span>
             </div>
-            <div class="command-block">
-              <label for="commandOutput">k6 command</label>
-              <input type="text" id="commandOutput" readonly placeholder="k6 run <fileName>.js">
-            </div>
             <div class="actions">
-              <button type="button" class="primary" id="runBtn">Run with k6</button>
-              <button type="button" class="danger" id="cancelRunBtn" style="visibility: hidden;" disabled>Cancel run</button>
-              <button type="button" class="secondary" id="copyScriptBtn">Copy script</button>
-              <button type="button" class="secondary" id="copyCommandBtn">Copy command</button>
-              <button type="button" class="secondary" id="shareLinkBtn">Share link</button>
-              <button type="button" class="secondary" id="downloadBtn">Download script</button>
+              <div>
+                <button type="button" class="primary" id="runBtn">Run with k6</button>
+                <button type="button" class="danger" id="cancelRunBtn" style="visibility: hidden;" disabled>Cancel run</button>
+              </div>
+              <div>
+                <button type="button" class="secondary" id="copyScriptBtn">Copy script</button>
+                <button type="button" class="secondary" id="shareLinkBtn">Share link</button>
+                <button type="button" class="secondary" id="downloadBtn">Download script</button>`
+              </div>
             </div>
           </div>
           <div class="output-pane">
@@ -698,7 +697,6 @@
     const builderLoadingOverlay = document.getElementById("builderLoading");
     const scriptCard = document.getElementById("scriptCard");
     const manualModeHelper = document.getElementById("manualModeHelper");
-    const commandOutput = document.getElementById("commandOutput");
     const statusMessage = document.getElementById("statusMessage");
     const fileNameSpan = document.getElementById("fileName");
     const runBtn = document.getElementById("runBtn");
@@ -758,7 +756,6 @@
     document.getElementById("addTagBtn").addEventListener("click", () => addKeyValueRow(tagsBody));
     document.getElementById("resetBtn").addEventListener("click", resetForm);
     document.getElementById("copyScriptBtn").addEventListener("click", () => copyToClipboard(getScriptContent(), "Script copied to clipboard"));
-    document.getElementById("copyCommandBtn").addEventListener("click", () => copyToClipboard(commandOutput.value, "Command copied to clipboard"));
     document.getElementById("downloadBtn").addEventListener("click", downloadScript);
     runBtn.addEventListener("click", startRun);
     cancelRunBtn.addEventListener("click", cancelRun);
@@ -884,10 +881,6 @@
         if (!preserveOutputs) {
           if (!fileNameSpan.textContent || fileNameSpan.textContent.trim() === "—") {
             fileNameSpan.textContent = "manual-script.js";
-          }
-
-          if (!getScriptContent().trim()) {
-            commandOutput.value = "";
           }
 
           setStatus("");
@@ -1032,7 +1025,6 @@
 
         const result = await response.json();
         setScriptContent(result.script || "");
-        commandOutput.value = result.command || "";
         fileNameSpan.textContent = result.suggestedFileName || "k6-test.js";
         setStatus("Script generated successfully");
         switchMode("manual", { preserveOutputs: true, focusPlacement: "start" });
@@ -1332,7 +1324,6 @@
 
       onMethodChange();
       setScriptContent("");
-      commandOutput.value = "";
       fileNameSpan.textContent = "—";
       runOutput.value = "";
       if (currentRunController) {
@@ -1358,7 +1349,6 @@
       setScriptContent(script);
       switchMode("manual", { force: true, focusPlacement: "start" });
       fileNameSpan.textContent = "shared-script.js";
-      commandOutput.value = "k6 run shared-script.js";
       setStatus("Loaded script from share link");
     }
 
