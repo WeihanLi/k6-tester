@@ -26,7 +26,8 @@
 - **Single binary deployments** – ship as a self-contained container image preloaded with k6 or run as a standalone ASP.NET Core app.
 
 ## Project layout
-```
+
+```text
 .
 ├── README.md                # Project overview (this file)
 ├── k6-tester.slnx           # Solution manifest referencing src/ and test/ projects
