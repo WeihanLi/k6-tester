@@ -1,3 +1,5 @@
+<!-- markdownlint-configure-file {"MD013": {"line_length": 420}} -->
+
 # Agent Playbook
 
 This document is for automated coding agents that need precise, repeatable instructions while working in this repository. Follow these guidelines to stay aligned with the human-facing docs and CI workflows.
