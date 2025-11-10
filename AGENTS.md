@@ -59,6 +59,7 @@ This document is for automated coding agents that need precise, repeatable instr
 ## CI Expectations
 
 - The `ci.yml` workflow checks out the repo, runs `dotnet restore`, builds Release, and executes `dotnet test` (Release, no build). Ensure the commands above succeed locally before opening a PR.
-- The `docker-build.yml` workflow depends on successful builds and expects Dockerfiles to remain multi-arch friendly. Test Buildx changes locally when possible.
+- The `docker.yml` workflow depends on successful builds and expects Dockerfiles to remain multi-arch friendly. Test Buildx changes locally when possible.
+- THe `markdown-lint.yml` workflow checks the markdown format to ensure we use the same style across the repository.
 
 Following this playbook keeps automated and human contributors aligned while preventing CI surprises.
