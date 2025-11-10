@@ -1,6 +1,10 @@
 # k6-tester
 
-`k6-tester` is a minimal ASP.NET Core app paired with a lightweight single-page UI that helps you design, run, and share [k6](https://k6.io) load tests without leaving the browser. Use the visual builder to configure scenarios, review the generated JavaScript, and execute it directly through the bundled k6 CLI integration while live output streams back to the page.
+`k6-tester` is a minimal ASP.NET Core app paired with a lightweight
+single-page UI that helps you design, run, and share [k6](https://k6.io) load
+tests without leaving the browser. Use the visual builder to configure
+scenarios, review the generated JavaScript, and execute it directly through the
+bundled k6 CLI integration while live output streams back to the page.
 
 ![Visual script builder](./assets/builder.png)
 ![Script editor and runner](./assets/script.png)
@@ -124,3 +128,5 @@ docker run --rm -p 8080:8080 weihanli/k6-tester
 ## Contributing
 
 Issues and pull requests are welcome. Please follow the workflow above (restore, Release build, Release tests) before submitting changes and include targeted assertions for any new script-generation behavior.
+
+<!-- markdownlint-enable MD013 -->
