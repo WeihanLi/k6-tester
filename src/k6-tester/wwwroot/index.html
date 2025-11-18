@@ -191,18 +191,26 @@
       box-shadow: 0 0 0 1px rgba(255, 82, 82, 0.35);
     }
 
-    #runOutputContainer:fullscreen,
-    #runOutputContainer:-webkit-full-screen {
+    body.run-output-window-fullscreen-active {
+      overflow: hidden;
+    }
+
+    #runOutputContainer.run-output-container--window-fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
       padding: 1.5rem;
       box-sizing: border-box;
       background: #121212;
       display: flex;
-      width: 100%;
-      height: 100%;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      gap: 1rem;
     }
 
-    #runOutputContainer:fullscreen .run-output,
-    #runOutputContainer:-webkit-full-screen .run-output {
+    #runOutputContainer.run-output-container--window-fullscreen .run-output {
       max-height: none;
       height: 100%;
       font-size: 1rem;
@@ -716,7 +724,7 @@
           <div class="output-pane">
             <div class="output-pane-header">
               <span class="output-pane-title">Output</span>
-              <button type="button" class="secondary" id="runOutputFullscreenBtn" aria-pressed="false">FullScreen</button>
+              <button type="button" class="secondary" id="runOutputFullscreenBtn" aria-pressed="false">Fullscreen Output</button>
             </div>
             <div id="runOutputContainer" class="run-output-container">
               <div id="runOutput" class="run-output" role="log" aria-live="polite" aria-label="k6 run output" tabindex="0" data-placeholder="Run the test to view live k6 output."></div>
@@ -797,6 +805,8 @@
     const shareLinkBtn = document.getElementById("shareLinkBtn");
     const toggleScriptLayoutBtn = document.getElementById("toggleScriptLayoutBtn");
     const scriptLayoutContainer = document.getElementById("scriptLayout");
+    const RUN_OUTPUT_FULLSCREEN_CLASS = "run-output-container--window-fullscreen";
+    const BODY_FULLSCREEN_CLASS = "run-output-window-fullscreen-active";
     const builderPlaceholderText = (scriptPlaceholder?.textContent || scriptOutput?.placeholder || "").trim() || "Configure the form and click Generate script.";
     const manualPlaceholderText = "Review or edit the k6 script here.";
     const generateButton = configForm?.querySelector('button[type=\"submit\"]');
@@ -806,7 +816,6 @@
     let currentRunController = null;
     let runOutputPartialLine = null;
     let runOutputShouldStickToBottom = true;
-    let runOutputSupportsFullscreen = false;
     let scriptEditor = null;
     let currentMode = "builder";
     let isSplitLayout = false;
@@ -940,21 +949,16 @@
     manualModeBtn?.addEventListener("click", () => switchMode("manual"));
     toggleScriptLayoutBtn?.addEventListener("click", () => applyScriptLayout(!isSplitLayout));
 
-    runOutputSupportsFullscreen = Boolean(
-      runOutputContainer?.requestFullscreen
-      || runOutputContainer?.webkitRequestFullscreen
-    );
+    runOutputFullscreenBtn?.addEventListener("click", () => {
+      toggleRunOutputFullscreen();
+    });
 
-    if (runOutputSupportsFullscreen) {
-      runOutputFullscreenBtn?.addEventListener("click", () => {
-        void toggleRunOutputFullscreen();
-      });
-      document.addEventListener("fullscreenchange", updateRunOutputFullscreenButton);
-      document.addEventListener("webkitfullscreenchange", updateRunOutputFullscreenButton);
-    } else {
-      runOutputFullscreenBtn?.setAttribute("disabled", "true");
-      runOutputFullscreenBtn?.setAttribute("title", "Fullscreen is not supported in this browser.");
-    }
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && isRunOutputFullscreen()) {
+        exitRunOutputFullscreen();
+        updateRunOutputFullscreenButton();
+      }
+    });
 
     runOutput?.addEventListener("scroll", handleRunOutputScroll);
     updateRunOutputFullscreenButton();
@@ -1428,7 +1432,7 @@
           throw new Error("Streaming not supported in this browser.");
         }
 
-        // toggleRunOutputFullscreen();
+        toggleRunOutputFullscreen();
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -1515,43 +1519,40 @@
         return false;
       }
 
-      return document.fullscreenElement === runOutputContainer
-        || document.webkitFullscreenElement === runOutputContainer;
+      return runOutputContainer.classList.contains(RUN_OUTPUT_FULLSCREEN_CLASS);
     }
 
-    async function toggleRunOutputFullscreen() {
+    function enterRunOutputFullscreen() {
       if (!runOutputContainer) {
         return;
       }
 
-      const enteringFullscreen = !isRunOutputFullscreen();
+      runOutputContainer.classList.add(RUN_OUTPUT_FULLSCREEN_CLASS);
+      document.body?.classList.add(BODY_FULLSCREEN_CLASS);
+      scrollRunOutputToBottom({ force: true });
+    }
 
-      try {
-        if (enteringFullscreen) {
-          if (runOutputContainer.requestFullscreen) {
-            await runOutputContainer.requestFullscreen();
-          } else if (runOutputContainer.webkitRequestFullscreen) {
-            runOutputContainer.webkitRequestFullscreen();
-          } else {
-            throw new Error("Fullscreen API is not supported in this browser.");
-          }
-        } else {
-          if (document.exitFullscreen) {
-            await document.exitFullscreen();
-          } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-          } else {
-            throw new Error("Unable to exit fullscreen mode.");
-          }
-        }
-      } catch (fullscreenError) {
-        appendRunOutput(`[error] ${fullscreenError.message}\n`);
-      } finally {
-        if (enteringFullscreen) {
-          scrollRunOutputToBottom({ force: true });
-        }
-        updateRunOutputFullscreenButton();
+    function exitRunOutputFullscreen() {
+      if (!runOutputContainer) {
+        return;
       }
+
+      runOutputContainer.classList.remove(RUN_OUTPUT_FULLSCREEN_CLASS);
+      document.body?.classList.remove(BODY_FULLSCREEN_CLASS);
+    }
+
+    function toggleRunOutputFullscreen() {
+      if (!runOutputContainer) {
+        return;
+      }
+
+      if (isRunOutputFullscreen()) {
+        exitRunOutputFullscreen();
+      } else {
+        enterRunOutputFullscreen();
+      }
+
+      updateRunOutputFullscreenButton();
     }
 
     function updateRunOutputFullscreenButton() {
@@ -1559,15 +1560,15 @@
         return;
       }
 
-      if (!runOutputSupportsFullscreen) {
-        runOutputFullscreenBtn.textContent = "Fullscreen unavailable";
-        runOutputFullscreenBtn.setAttribute("aria-pressed", "false");
-        return;
-      }
-
       const isFullscreen = isRunOutputFullscreen();
       runOutputFullscreenBtn.textContent = isFullscreen ? "Exit fullscreen" : "Fullscreen output";
       runOutputFullscreenBtn.setAttribute("aria-pressed", String(isFullscreen));
+      runOutputFullscreenBtn.setAttribute(
+        "title",
+        isFullscreen
+          ? "Return the output panel to its original size"
+          : "Expand the output panel to fill this window"
+      );
 
       if (isFullscreen) {
         runOutput?.focus({ preventScroll: true });
