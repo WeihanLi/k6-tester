@@ -217,6 +217,29 @@
       width: 100%;
     }
 
+    .run-output-fullscreen-tip {
+      position: absolute;
+      top: 1rem;
+      right: 1.5rem;
+      background: rgba(14, 18, 30, 0.85);
+      color: #fff;
+      padding: 0.6rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      box-shadow: 0 12px 25px -18px rgba(0, 0, 0, 0.8);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 200ms ease, transform 200ms ease;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .run-output-fullscreen-tip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     .inline {
       display: flex;
       gap: 0.75rem;
@@ -807,6 +830,7 @@
     const scriptLayoutContainer = document.getElementById("scriptLayout");
     const RUN_OUTPUT_FULLSCREEN_CLASS = "run-output-container--window-fullscreen";
     const BODY_FULLSCREEN_CLASS = "run-output-window-fullscreen-active";
+    const RUN_OUTPUT_FULLSCREEN_TIP_ID = "runOutputFullscreenTip";
     const builderPlaceholderText = (scriptPlaceholder?.textContent || scriptOutput?.placeholder || "").trim() || "Configure the form and click Generate script.";
     const manualPlaceholderText = "Review or edit the k6 script here.";
     const generateButton = configForm?.querySelector('button[type=\"submit\"]');
@@ -1529,6 +1553,7 @@
 
       runOutputContainer.classList.add(RUN_OUTPUT_FULLSCREEN_CLASS);
       document.body?.classList.add(BODY_FULLSCREEN_CLASS);
+      showRunOutputFullscreenTip();
       scrollRunOutputToBottom({ force: true });
     }
 
@@ -1539,6 +1564,7 @@
 
       runOutputContainer.classList.remove(RUN_OUTPUT_FULLSCREEN_CLASS);
       document.body?.classList.remove(BODY_FULLSCREEN_CLASS);
+      hideRunOutputFullscreenTip();
     }
 
     function toggleRunOutputFullscreen() {
@@ -1553,6 +1579,39 @@
       }
 
       updateRunOutputFullscreenButton();
+    }
+
+    function showRunOutputFullscreenTip() {
+      if (!runOutputContainer) {
+        return;
+      }
+
+      let tip = document.getElementById(RUN_OUTPUT_FULLSCREEN_TIP_ID);
+      if (tip) {
+        tip.classList.add("visible");
+        return;
+      }
+
+      tip = document.createElement("div");
+      tip.id = RUN_OUTPUT_FULLSCREEN_TIP_ID;
+      tip.className = "run-output-fullscreen-tip";
+      tip.textContent = "Press Esc to exit fullscreen";
+      runOutputContainer.appendChild(tip);
+
+      requestAnimationFrame(() => {
+        tip.classList.add("visible");
+      });
+    }
+
+    function hideRunOutputFullscreenTip() {
+      const tip = document.getElementById(RUN_OUTPUT_FULLSCREEN_TIP_ID);
+      if (!tip) {
+        return;
+      }
+
+      tip.classList.remove("visible");
+      tip.addEventListener("transitionend", () => tip.remove(), { once: true });
+      setTimeout(() => tip.remove(), 500); // fallback in case transitionend doesn't fire
     }
 
     function updateRunOutputFullscreenButton() {
