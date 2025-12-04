@@ -109,4 +109,93 @@ public class K6ScriptBuilderTests
         Assert.Contains("const payload = `", result.Script);
         Assert.Contains("const params = { headers:", result.Script);
     }
+
+    [Fact]
+    public void BuildScript_WhenConfigIsNull_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => K6ScriptBuilder.BuildScript(null!));
+    }
+
+    [Fact]
+    public void BuildScript_WithStagesMissingData_NormalizesDurationAndTarget()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "NormalizeStage",
+            TargetUrl = "https://example.com",
+            Stages =
+            [
+                new K6Stage { Duration = " ", Target = -5 },
+                new K6Stage { Duration = " 45s ", Target = 10 }
+            ]
+        };
+
+        var result = K6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("{ duration: '30s', target: 0 }", result);
+        Assert.Contains("{ duration: '45s', target: 10 }", result);
+    }
+
+    [Fact]
+    public void BuildScript_WhenNoHeadersProvided_InitializesEmptyParams()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "NoHeaders",
+            TargetUrl = "https://example.com"
+        };
+
+        var result = K6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("const params = {};", result);
+    }
+
+    [Fact]
+    public void BuildScript_WithPostWithoutPayload_AddsPlaceholderAndPostCall()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "PostPlaceholder",
+            TargetUrl = "https://example.com",
+            HttpMethod = "post",
+            Payload = "",
+            Headers = new Dictionary<string, string> { ["Content-Type"] = "application/json" }
+        };
+
+        var result = K6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("const payload = ''; // Provide a payload when using POST, PUT or PATCH", result);
+        Assert.Contains("http.post(url, payload, params)", result);
+    }
+
+    [Fact]
+    public void BuildScript_WhenSleepSecondsPositive_AddsSleepAndSkipsCheckWhenDisabled()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "Sleepy",
+            TargetUrl = "https://example.com",
+            SleepSeconds = 3,
+            CheckResponse = false
+        };
+
+        var result = K6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("sleep(3);", result);
+        Assert.DoesNotContain("status is 200", result);
+    }
+
+    [Fact]
+    public void BuildScript_EscapesSingleQuotesInTargetUrl()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "Escapes",
+            TargetUrl = " https://api.example.com/product?id=42&name=Bob's Burger "
+        };
+
+        var result = K6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("const url = 'https://api.example.com/product?id=42&name=Bob\\'s Burger';", result);
+    }
 }
