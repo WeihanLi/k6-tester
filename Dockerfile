@@ -14,7 +14,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 ARG TARGETARCH
-ARG K6_VERSION=1.3.0
+ARG K6_VERSION=1.4.2
 ENV K6_VERSION=${K6_VERSION}
 
 RUN set -eux; \
