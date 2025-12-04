@@ -31,7 +31,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/k6-tester
           # generate Docker tags based on the following events/attributes
           tags: |
-            type=raw,value=${{ github.event.inputs.image-tag }},enable={{ github.event.inputs.image-tag != '' }}
+            type=raw,value=${{ github.event.inputs.image-tag }},enable=${{ github.event.inputs.image-tag != '' }}
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
           labels : |
