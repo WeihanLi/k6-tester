@@ -104,7 +104,7 @@ To use a different k6 version, pass the `K6_VERSION` build argument and update a
 docker build -t k6-tester --build-arg K6_VERSION=v0.49.0 .
 ```
 
-A published image is also available:
+A published image is also available, [weihanli/k6-tester](https://hub.docker.com/r/weihanli/k6-tester/tags):
 
 ```bash
 docker run --rm -p 8080:8080 weihanli/k6-tester
