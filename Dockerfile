@@ -14,6 +14,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 ARG TARGETARCH
+
+# k6 releases: https://github.com/grafana/k6/releases/
 ARG K6_VERSION=1.4.2
 ENV K6_VERSION=${K6_VERSION}
 

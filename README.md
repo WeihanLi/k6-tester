@@ -15,8 +15,11 @@ bundled k6 CLI integration while live output streams back to the page.
 - [Project layout](#project-layout)
 - [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
+- [Usage](#usage)
 - [Testing](#testing)
 - [Docker](#docker)
+- [API endpoints](#api-endpoints)
+- [Troubleshooting](#troubleshooting)
 - [Local development notes](#local-development-notes)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -70,9 +73,16 @@ bundled k6 CLI integration while live output streams back to the page.
    dotnet run --project src/k6-tester/k6-tester.csproj
    ```
 
-4. Open the printed URL (defaults to `http://localhost:5266`) and configure a scenario. **Generate script** to inspect the JavaScript, then **Run with k6** to execute it locally.
+4. Open the printed URL (defaults to `http://localhost:5266`) and configure a scenario. **Generate script** to inspect the JavaScript, then **Run with k6** to execute it locally (ensure the `k6` CLI is on your `PATH` so streamed runs succeed).
 
 The builder emits deterministic script content, making it easy to check into version control or reuse outside the UI.
+
+## Usage
+
+- **Builder mode** – Fill in the form to describe your target URL, HTTP method, VU profile (constant or stage-based ramping), headers, tags, payload, thresholds, and optional response checks. The builder handles JSON serialization and generates a suggested filename.
+- **Script mode** – Toggle to the editor to tweak the generated JavaScript or paste an existing script. You can copy to the clipboard, download the file, or create a shareable URL (the SPA base64-encodes the script into the query string).
+- **Runner panel** – Streamed stdout/stderr from the local `k6` process appears in the output card with fullscreen support. Cancel the run at any time; cleanup kills the underlying process tree and reports the exit code.
+- **State & sharing** – The UI persists the last script and layout preference in `localStorage`. Shared links load directly into script mode, letting teammates review or execute identical content.
 
 ## Testing
 
@@ -109,6 +119,19 @@ A published image is also available, [weihanli/k6-tester](https://hub.docker.com
 ```bash
 docker run --rm -p 8080:8080 weihanli/k6-tester
 ```
+
+## API endpoints
+
+- `GET /health/live` – Lightweight liveness probe for containers and orchestrators.
+- `POST /api/k6/script` – Accepts a `K6LoadTestConfig` payload and returns `{ script, suggestedFileName }`. Validation ensures `targetUrl` is absolute.
+- `POST /api/k6/run` – Streams combined stdout/stderr from a local `k6 run` invocation. The body accepts `{ script, fileName }`; missing scripts result in a `400` with a descriptive error.
+
+## Troubleshooting
+
+- **`[error] k6 executable not found`** – Install the [k6 CLI](https://k6.io/docs/get-started/installation/) or ensure it is on your `PATH`. The API intentionally surfaces this message so users know why runs fail.
+- **No output appears while running** – Confirm your browser supports streaming `fetch` responses. Older browsers may buffer until completion; use an up-to-date Chromium, Firefox, or Edge build.
+- **Generated scripts look stale** – The UI only regenerates scripts when form input changes. Click **Generate script** after editing fields, or switch to manual mode for hand-written updates.
+- **Docker run fails on Apple Silicon** – Build the image locally with Buildx (`docker build --platform linux/amd64,linux/arm64 …`) or pull the published multi-arch image `weihanli/k6-tester`.
 
 ## Local development notes
 
