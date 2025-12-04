@@ -30,9 +30,7 @@ app.MapPost("/api/k6/run", (HttpContext httpContext, K6RunRequest request) =>
 
     httpContext.Response.Headers.CacheControl = "no-cache";
     httpContext.Response.Headers.Pragma = "no-cache";
-    httpContext.Response.Headers["X-Accel-Buffering"] = "no";
 
-    var cancellationToken = httpContext.RequestAborted;
     var scriptToRun = request.Script;
     var fileName = string.IsNullOrWhiteSpace(request.FileName)
         ? "k6-script.js"
@@ -40,7 +38,7 @@ app.MapPost("/api/k6/run", (HttpContext httpContext, K6RunRequest request) =>
 
     return Results.Stream(async stream =>
     {
-        await K6Runner.RunAsync(scriptToRun, fileName, stream, cancellationToken);
+        await K6Runner.RunAsync(scriptToRun, fileName, stream, httpContext.RequestAborted);
     }, "text/plain; charset=utf-8");
 });
 
