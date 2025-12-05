@@ -1,10 +1,14 @@
 using K6Tester.Models;
 using K6Tester.Services;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace K6Tester.Tests;
 
 public class K6ScriptBuilderTests
 {
+    private readonly IK6ScriptBuilder _k6ScriptBuilder = new K6ScriptBuilder();
+
     [Fact]
     public void BuildScript_WhenNoStagesConfigured_UsesConstantVuExecutor()
     {
@@ -16,7 +20,7 @@ public class K6ScriptBuilderTests
             VirtualUsers = 25
         };
 
-        var result = K6ScriptBuilder.BuildScript(config);
+        var result = _k6ScriptBuilder.BuildScript(config);
 
         Assert.Equal("smoke.js", result.SuggestedFileName);
         Assert.Contains("executor: 'constant-vus'", result.Script);
@@ -39,7 +43,7 @@ public class K6ScriptBuilderTests
             ]
         };
 
-        var result = K6ScriptBuilder.BuildScript(config);
+        var result = _k6ScriptBuilder.BuildScript(config);
 
         Assert.Contains("executor: 'ramping-vus'", result.Script);
         Assert.Contains("{ duration: '30s', target: 5 }", result.Script);
@@ -55,7 +59,7 @@ public class K6ScriptBuilderTests
             TargetUrl = "https://example.com"
         };
 
-        var result = K6ScriptBuilder.BuildScript(config);
+        var result = _k6ScriptBuilder.BuildScript(config);
 
         Assert.Equal("s_123_homepage_load.js", result.SuggestedFileName);
         Assert.Contains("'s_123_homepage_load'", result.Script);
@@ -72,7 +76,7 @@ public class K6ScriptBuilderTests
             HttpMethod = "TRACE"
         };
 
-        var result = K6ScriptBuilder.BuildScript(config);
+        var result = _k6ScriptBuilder.BuildScript(config);
 
         Assert.Contains("http.get(url, params)", result.Script);
     }
@@ -101,7 +105,7 @@ public class K6ScriptBuilderTests
             ]
         };
 
-        var result = K6ScriptBuilder.BuildScript(config);
+        var result = _k6ScriptBuilder.BuildScript(config);
 
         Assert.Contains("\"environment\":\"test\"", result.Script);
         Assert.Contains("http_req_duration: ['p(95)<500']", result.Script);
@@ -113,7 +117,7 @@ public class K6ScriptBuilderTests
     [Fact]
     public void BuildScript_WhenConfigIsNull_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => K6ScriptBuilder.BuildScript(null!));
+        Assert.Throws<ArgumentNullException>(() => _k6ScriptBuilder.BuildScript(null!));
     }
 
     [Fact]
@@ -130,7 +134,7 @@ public class K6ScriptBuilderTests
             ]
         };
 
-        var result = K6ScriptBuilder.BuildScript(config).Script;
+        var result = _k6ScriptBuilder.BuildScript(config).Script;
 
         Assert.Contains("{ duration: '30s', target: 0 }", result);
         Assert.Contains("{ duration: '45s', target: 10 }", result);
@@ -145,7 +149,7 @@ public class K6ScriptBuilderTests
             TargetUrl = "https://example.com"
         };
 
-        var result = K6ScriptBuilder.BuildScript(config).Script;
+        var result = _k6ScriptBuilder.BuildScript(config).Script;
 
         Assert.Contains("const params = {};", result);
     }
@@ -162,7 +166,7 @@ public class K6ScriptBuilderTests
             Headers = new Dictionary<string, string> { ["Content-Type"] = "application/json" }
         };
 
-        var result = K6ScriptBuilder.BuildScript(config).Script;
+        var result = _k6ScriptBuilder.BuildScript(config).Script;
 
         Assert.Contains("const payload = ''; // Provide a payload when using POST, PUT or PATCH", result);
         Assert.Contains("http.post(url, payload, params)", result);
@@ -179,7 +183,7 @@ public class K6ScriptBuilderTests
             CheckResponse = false
         };
 
-        var result = K6ScriptBuilder.BuildScript(config).Script;
+        var result = _k6ScriptBuilder.BuildScript(config).Script;
 
         Assert.Contains("sleep(3);", result);
         Assert.DoesNotContain("status is 200", result);
@@ -194,8 +198,40 @@ public class K6ScriptBuilderTests
             TargetUrl = " https://api.example.com/product?id=42&name=Bob's Burger "
         };
 
-        var result = K6ScriptBuilder.BuildScript(config).Script;
+        var result = _k6ScriptBuilder.BuildScript(config).Script;
 
         Assert.Contains("const url = 'https://api.example.com/product?id=42&name=Bob\\'s Burger';", result);
+    }
+
+    [Fact]
+    public void BuildScript_WithMultilinePayload_EscapesBackticks()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "PayloadEscape",
+            TargetUrl = "https://example.com",
+            HttpMethod = "POST",
+            Payload = "line1\r\nline`2"
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("line1", script);
+        Assert.Contains("line\\`2", script);
+        Assert.Contains("const payload = `", script);
+    }
+
+    [Fact]
+    public void BuildScript_WhenTargetUrlMissing_FallsBackToDefault()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "FallbackUrl",
+            TargetUrl = ""
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("const url = 'https://k6.io';", script);
     }
 }

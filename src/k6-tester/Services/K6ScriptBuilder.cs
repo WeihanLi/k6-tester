@@ -5,7 +5,12 @@ using K6Tester.Models;
 
 namespace K6Tester.Services;
 
-public static class K6ScriptBuilder
+public interface IK6ScriptBuilder
+{
+    K6ScriptResult BuildScript(K6LoadTestConfig config);
+}
+
+public class K6ScriptBuilder : IK6ScriptBuilder
 {
     private static readonly Regex FileNameSanitizer = new("[^a-zA-Z0-9_-]+", RegexOptions.Compiled);
 
@@ -14,7 +19,7 @@ public static class K6ScriptBuilder
         WriteIndented = false
     };
 
-    public static K6ScriptResult BuildScript(K6LoadTestConfig config)
+    public K6ScriptResult BuildScript(K6LoadTestConfig config)
     {
         ArgumentNullException.ThrowIfNull(config);
 

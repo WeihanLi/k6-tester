@@ -4,9 +4,22 @@ using System.Text;
 
 namespace K6Tester.Services;
 
-public static class K6Runner
+public interface IK6Runner
 {
-    public static async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken)
+    Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken);
+}
+
+public sealed class K6Runner : IK6Runner
+{
+    private const string ExecutableOverrideEnvironmentVariable = "K6_TESTER_CLI_PATH";
+    private readonly IProcessRunner _processRunner;
+
+    public K6Runner(IProcessRunner processRunner)
+    {
+        _processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
+    }
+
+    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(outputStream);
 
@@ -24,7 +37,7 @@ public static class K6Runner
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = "k6",
+                FileName = ResolveExecutableName(),
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -34,25 +47,21 @@ public static class K6Runner
             startInfo.ArgumentList.Add("run");
             startInfo.ArgumentList.Add(tempFilePath);
 
-            using var process = new Process
-            {
-                StartInfo = startInfo,
-                EnableRaisingEvents = true
-            };
-
-            if (!process.Start())
+            if (!_processRunner.TryStart(startInfo, out var process) || process is null)
             {
                 await WriteLineAsync(outputStream, "[error] Failed to start k6 process.", cancellationToken);
                 return;
             }
 
+            using var processHandle = process;
+
             using var registration = cancellationToken.Register(() =>
             {
                 try
                 {
-                    if (!process.HasExited)
+                    if (!processHandle.HasExited)
                     {
-                        process.Kill(entireProcessTree: true);
+                        processHandle.Kill(entireProcessTree: true);
                     }
                 }
                 catch
@@ -61,13 +70,13 @@ public static class K6Runner
                 }
             });
 
-            var outputTask = PipeStreamAsync(process.StandardOutput, "[out]", outputStream, cancellationToken);
-            var errorTask = PipeStreamAsync(process.StandardError, "[err]", outputStream, cancellationToken);
-            var waitForExitTask = process.WaitForExitAsync(cancellationToken);
+            var outputTask = PipeStreamAsync(processHandle.StandardOutput, "[out]", outputStream, cancellationToken);
+            var errorTask = PipeStreamAsync(processHandle.StandardError, "[err]", outputStream, cancellationToken);
+            var waitForExitTask = processHandle.WaitForExitAsync(cancellationToken);
 
             await Task.WhenAll(waitForExitTask, outputTask, errorTask);
 
-            await WriteLineAsync(outputStream, $"[exit] k6 exited with code {process.ExitCode}.", cancellationToken);
+            await WriteLineAsync(outputStream, $"[exit] k6 exited with code {processHandle.ExitCode}.", cancellationToken);
         }
         catch (Win32Exception)
         {
@@ -149,5 +158,16 @@ public static class K6Runner
         {
             // Ignore write failures caused by disconnected clients.
         }
+    }
+
+    private static string ResolveExecutableName()
+    {
+        var overridePath = Environment.GetEnvironmentVariable(ExecutableOverrideEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            return overridePath;
+        }
+
+        return "k6";
     }
 }
