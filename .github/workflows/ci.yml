@@ -25,4 +25,7 @@ jobs:
         run: dotnet build k6-tester.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test test/k6-tester.Tests/k6-tester.Tests.csproj --configuration Release --no-build
+        run: |
+          cd test/k6-tester.Tests/
+          dotnet add package GitHubActionsTestLogger
+          dotnet test
