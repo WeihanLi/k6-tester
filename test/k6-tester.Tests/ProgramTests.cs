@@ -96,6 +96,122 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("[out] stub stdout line", text);
         Assert.Contains("[exit] k6 exited with code 0.", text);
     }
+
+    [Fact]
+    public async Task RunEndpoint_WithErrorsStreamsErrorOutput()
+    {
+        var factory = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IK6Runner>(_ => MockK6Runner.Error);
+            }));
+        using var client = factory.CreateClient();
+
+        var payload = new K6RunRequest
+        {
+            Script = "export default function () { throw new Error('test'); }",
+            FileName = "error-run.js"
+        };
+
+        var response = await client.PostAsJsonAsync("/api/k6/run", payload, cancellationToken: TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("[err] stub stderr line", text);
+        Assert.Contains("[exit] k6 exited with code 1.", text);
+    }
+
+    [Fact]
+    public async Task ScriptEndpoint_WithEmptyTestName_StillReturnsScript()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/k6/script", new K6LoadTestConfig
+        {
+            TestName = "",
+            TargetUrl = "https://example.com"
+        }, cancellationToken: TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(body);
+        Assert.NotEmpty(body!.Script);
+    }
+
+    [Fact]
+    public async Task ScriptEndpoint_WithNullUri_ReturnsBadRequest()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/k6/script", new K6LoadTestConfig
+        {
+            TestName = "test",
+            TargetUrl = null!
+        }, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ScriptEndpoint_WithNonHttpsUri_StillAcceptsRequest()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/k6/script", new K6LoadTestConfig
+        {
+            TestName = "http-test",
+            TargetUrl = "http://example.com"
+        }, cancellationToken: TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(body);
+        Assert.Contains("http.get(url, params)", body.Script);
+    }
+
+    [Fact]
+    public async Task RunEndpoint_WithWhitespaceScript_ReturnsBadRequest()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "   " }, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(TestContext.Current.CancellationToken);
+        Assert.Equal("Test script is required to run k6.", body?["error"]);
+    }
+
+    [Fact]
+    public async Task RunEndpoint_WithNullScript_ReturnsBadRequest()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = null }, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(TestContext.Current.CancellationToken);
+        Assert.Equal("Test script is required to run k6.", body?["error"]);
+    }
+
+    [Fact]
+    public async Task ScriptEndpoint_ResponseContainsExpectedProperties()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/k6/script", new K6LoadTestConfig
+        {
+            TestName = "full-test",
+            TargetUrl = "https://api.example.com",
+            Duration = "5m",
+            VirtualUsers = 50
+        }, cancellationToken: TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(body);
+        Assert.NotEmpty(body!.Script);
+        Assert.NotEmpty(body.SuggestedFileName);
+        Assert.NotEmpty(body.Command);
+        Assert.EndsWith(".js", body.SuggestedFileName);
+        Assert.StartsWith("k6 run ", body.Command);
+    }
 }
 
 class MockK6ScriptBuilder : IK6ScriptBuilder

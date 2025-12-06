@@ -234,4 +234,331 @@ public class K6ScriptBuilderTests
 
         Assert.Contains("const url = 'https://k6.io';", script);
     }
+
+    [Theory]
+    [InlineData("PUT")]
+    [InlineData("put")]
+    [InlineData("Put")]
+    public void BuildScript_WithPutMethod_GeneratesCorrectHttpCall(string method)
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "PutTest",
+            TargetUrl = "https://example.com/api/resource",
+            HttpMethod = method,
+            Payload = "{\"id\":123}"
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("http.put(url, payload, params)", script);
+        Assert.Contains("const payload = `", script);
+    }
+
+    [Theory]
+    [InlineData("PATCH")]
+    [InlineData("patch")]
+    public void BuildScript_WithPatchMethod_GeneratesCorrectHttpCall(string method)
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "PatchTest",
+            TargetUrl = "https://example.com/api/resource",
+            HttpMethod = method,
+            Payload = "{\"name\":\"updated\"}"
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("http.patch(url, payload, params)", script);
+    }
+
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("delete")]
+    public void BuildScript_WithDeleteMethod_GeneratesCorrectHttpCall(string method)
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "DeleteTest",
+            TargetUrl = "https://example.com/api/resource/123",
+            HttpMethod = method
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("http.del(url, params)", script);
+        Assert.DoesNotContain("payload", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithNullTestName_UsesDefaultScenarioName()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = null!,
+            TargetUrl = "https://example.com"
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("k6_scenario.js", result.SuggestedFileName);
+        Assert.Contains("'k6_scenario'", result.Script);
+    }
+
+    [Fact]
+    public void BuildScript_WithWhitespaceTestName_UsesDefaultScenarioName()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "   ",
+            TargetUrl = "https://example.com"
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("k6_scenario.js", result.SuggestedFileName);
+    }
+
+    [Fact]
+    public void BuildScript_WithSpecialCharactersInTestName_SanitizesCorrectly()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "Test@#$%Name!*&",
+            TargetUrl = "https://example.com"
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("test_name.js", result.SuggestedFileName);
+        Assert.Contains("'test_name'", result.Script);
+    }
+
+    [Fact]
+    public void BuildScript_WithOnlySpecialCharacters_UsesDefaultScenarioName()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "@#$%!",
+            TargetUrl = "https://example.com"
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("k6_scenario.js", result.SuggestedFileName);
+    }
+
+    [Fact]
+    public void BuildScript_WithZeroVirtualUsers_UsesMinimumOfOne()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "ZeroVus",
+            TargetUrl = "https://example.com",
+            VirtualUsers = 0
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("vus: 1", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithNegativeVirtualUsers_UsesMinimumOfOne()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "NegativeVus",
+            TargetUrl = "https://example.com",
+            VirtualUsers = -10
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("vus: 1", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithNegativeSleepSeconds_DoesNotAddSleep()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "NegativeSleep",
+            TargetUrl = "https://example.com",
+            SleepSeconds = -5
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.DoesNotContain("sleep(", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithZeroP95Threshold_DoesNotIncludeThreshold()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "ZeroThreshold",
+            TargetUrl = "https://example.com",
+            P95ThresholdMs = 0
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.DoesNotContain("thresholds:", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithNegativeP95Threshold_DoesNotIncludeThreshold()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "NegativeThreshold",
+            TargetUrl = "https://example.com",
+            P95ThresholdMs = -100
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.DoesNotContain("thresholds:", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithEmptyStagesList_UsesConstantVuExecutor()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "EmptyStages",
+            TargetUrl = "https://example.com",
+            Stages = []
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("executor: 'constant-vus'", script);
+        Assert.DoesNotContain("ramping-vus", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithNullDuration_UsesDefaultDuration()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "NullDuration",
+            TargetUrl = "https://example.com",
+            Duration = null!
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("duration: '1m'", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithWhitespaceDuration_UsesDefaultDuration()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "WhitespaceDuration",
+            TargetUrl = "https://example.com",
+            Duration = "   "
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("duration: '1m'", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithComplexPayloadEscaping_HandlesCorrectly()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "ComplexPayload",
+            TargetUrl = "https://example.com",
+            HttpMethod = "POST",
+            Payload = "Line 1 with `backtick`\nLine 2 with `another`"
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("Line 1 with \\`backtick\\`", script);
+        Assert.Contains("Line 2 with \\`another\\`", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithMultipleHeaders_SerializesAllHeaders()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "MultiHeaders",
+            TargetUrl = "https://example.com",
+            Headers = new Dictionary<string, string>
+            {
+                ["Content-Type"] = "application/json",
+                ["Authorization"] = "Bearer token123",
+                ["X-Custom-Header"] = "value"
+            }
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("\"Content-Type\":\"application/json\"", script);
+        Assert.Contains("\"Authorization\":\"Bearer token123\"", script);
+        Assert.Contains("\"X-Custom-Header\":\"value\"", script);
+    }
+
+    [Fact]
+    public void BuildScript_WithMultipleTags_SerializesAllTags()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "MultiTags",
+            TargetUrl = "https://example.com",
+            Tags = new Dictionary<string, string>
+            {
+                ["environment"] = "production",
+                ["team"] = "backend",
+                ["version"] = "v1.2.3"
+            }
+        };
+
+        var script = _k6ScriptBuilder.BuildScript(config).Script;
+
+        Assert.Contains("\"environment\":\"production\"", script);
+        Assert.Contains("\"team\":\"backend\"", script);
+        Assert.Contains("\"version\":\"v1.2.3\"", script);
+    }
+
+    [Fact]
+    public void BuildScript_CommandIncludesCorrectFileName()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "CommandTest",
+            TargetUrl = "https://example.com"
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("k6 run commandtest.js", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_ResultPropertiesMatchConfig()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "Properties",
+            TargetUrl = "https://example.com"
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("properties.js", result.SuggestedFileName);
+        Assert.Contains("'properties'", result.Script);
+        Assert.Equal("k6 run properties.js", result.Command);
+        Assert.NotEmpty(result.Script);
+    }
 }

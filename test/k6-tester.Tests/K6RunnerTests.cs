@@ -51,6 +51,98 @@ public class K6RunnerTests
         Assert.Contains("[error] Failed to start k6 process.", text);
     }
 
+    [Fact]
+    public async Task RunAsync_WhenProcessExitsWithNonZeroCode_ReportsCorrectExitCode()
+    {
+        using var output = new MemoryStream();
+        var runner = new K6Runner(new TestProcessRunner(
+            stdout: new[] { "running test" },
+            stderr: new[] { "test failed" },
+            exitCode: 1));
+
+        await runner.RunAsync("console.log('test');", "test.js", output, TestContext.Current.CancellationToken);
+
+        var text = Encoding.UTF8.GetString(output.ToArray());
+        Assert.Contains("[out] running test", text);
+        Assert.Contains("[err] test failed", text);
+        Assert.Contains("[exit] k6 exited with code 1.", text);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithMultipleStdoutLines_StreamsAllLines()
+    {
+        using var output = new MemoryStream();
+        var runner = new K6Runner(new TestProcessRunner(
+            stdout: new[] { "line 1", "line 2", "line 3" },
+            stderr: Array.Empty<string>()));
+
+        await runner.RunAsync("console.log('test');", "test.js", output, TestContext.Current.CancellationToken);
+
+        var text = Encoding.UTF8.GetString(output.ToArray());
+        Assert.Contains("[out] line 1", text);
+        Assert.Contains("[out] line 2", text);
+        Assert.Contains("[out] line 3", text);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithMultipleStderrLines_StreamsAllLines()
+    {
+        using var output = new MemoryStream();
+        var runner = new K6Runner(new TestProcessRunner(
+            stdout: Array.Empty<string>(),
+            stderr: new[] { "error 1", "error 2" }));
+
+        await runner.RunAsync("console.log('test');", "test.js", output, TestContext.Current.CancellationToken);
+
+        var text = Encoding.UTF8.GetString(output.ToArray());
+        Assert.Contains("[err] error 1", text);
+        Assert.Contains("[err] error 2", text);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithEmptyFileName_UsesDefaultFileName()
+    {
+        using var output = new MemoryStream();
+        var runner = new K6Runner(new TestProcessRunner(
+            stdout: new[] { "test output" },
+            stderr: Array.Empty<string>()));
+
+        await runner.RunAsync("console.log('test');", "", output, TestContext.Current.CancellationToken);
+
+        var text = Encoding.UTF8.GetString(output.ToArray());
+        Assert.Contains("[exit] k6 exited with code 0.", text);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithNullFileName_UsesDefaultFileName()
+    {
+        using var output = new MemoryStream();
+        var runner = new K6Runner(new TestProcessRunner(
+            stdout: new[] { "test output" },
+            stderr: Array.Empty<string>()));
+
+        await runner.RunAsync("console.log('test');", null, output, TestContext.Current.CancellationToken);
+
+        var text = Encoding.UTF8.GetString(output.ToArray());
+        Assert.Contains("[exit] k6 exited with code 0.", text);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithNoOutput_OnlyWritesExitMessage()
+    {
+        using var output = new MemoryStream();
+        var runner = new K6Runner(new TestProcessRunner(
+            stdout: Array.Empty<string>(),
+            stderr: Array.Empty<string>()));
+
+        await runner.RunAsync("console.log('test');", "test.js", output, TestContext.Current.CancellationToken);
+
+        var text = Encoding.UTF8.GetString(output.ToArray());
+        Assert.DoesNotContain("[out]", text);
+        Assert.DoesNotContain("[err]", text);
+        Assert.Contains("[exit] k6 exited with code 0.", text);
+    }
+
     private sealed class FailingProcessRunner : IProcessRunner
     {
         public bool TryStart(ProcessStartInfo startInfo, out IProcessHandle? process)
