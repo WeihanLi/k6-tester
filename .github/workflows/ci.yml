@@ -28,4 +28,4 @@ jobs:
         run: |
           cd test/k6-tester.Tests/
           dotnet add package GitHubActionsTestLogger
-          dotnet run
+          dotnet test --logger GitHubActions

@@ -24,7 +24,7 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task HealthLive_ReturnsOk()
     {
         using var client = _factory.CreateClient();
-        var response = await client.GetAsync("/health/live", TestContext.Current.CancellationToken);
+        var response = await client.GetAsync("/health/live");
 
         Assert.True(response.IsSuccessStatusCode);
     }
@@ -37,10 +37,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         {
             TestName = "invalid",
             TargetUrl = "/relative"
-        }, cancellationToken: TestContext.Current.CancellationToken);
+        });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         Assert.Equal("targetUrl must be an absolute URI.", body?["error"]);
     }
 
@@ -52,10 +52,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         {
             TestName = "api-smoke",
             TargetUrl = "https://example.com"
-        }, cancellationToken: TestContext.Current.CancellationToken);
+        });
 
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>(TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>();
 
         Assert.NotNull(body);
         Assert.Equal("api-smoke.js", body!.SuggestedFileName);
@@ -66,10 +66,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task RunEndpoint_MissingScript_ReturnsBadRequest()
     {
         using var client = _factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "" }, cancellationToken: TestContext.Current.CancellationToken);
+        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "" });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         Assert.Equal("Test script is required to run k6.", body?["error"]);
     }
 
@@ -89,10 +89,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
             FileName = "api-run.js"
         };
 
-        var response = await client.PostAsJsonAsync("/api/k6/run", payload, cancellationToken: TestContext.Current.CancellationToken);
+        var response = await client.PostAsJsonAsync("/api/k6/run", payload);
         response.EnsureSuccessStatusCode();
 
-        var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var text = await response.Content.ReadAsStringAsync();
         Assert.Contains("[out] stub stdout line", text);
         Assert.Contains("[exit] k6 exited with code 0.", text);
     }
@@ -113,10 +113,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
             FileName = "error-run.js"
         };
 
-        var response = await client.PostAsJsonAsync("/api/k6/run", payload, cancellationToken: TestContext.Current.CancellationToken);
+        var response = await client.PostAsJsonAsync("/api/k6/run", payload);
         response.EnsureSuccessStatusCode();
 
-        var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var text = await response.Content.ReadAsStringAsync();
         Assert.Contains("[err] stub stderr line", text);
         Assert.Contains("[exit] k6 exited with code 1.", text);
     }
@@ -129,10 +129,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         {
             TestName = "",
             TargetUrl = "https://example.com"
-        }, cancellationToken: TestContext.Current.CancellationToken);
+        });
 
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>(TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>();
 
         Assert.NotNull(body);
         Assert.NotEmpty(body!.Script);
@@ -146,7 +146,7 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         {
             TestName = "test",
             TargetUrl = null!
-        }, cancellationToken: TestContext.Current.CancellationToken);
+        });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -159,10 +159,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         {
             TestName = "http-test",
             TargetUrl = "http://example.com"
-        }, cancellationToken: TestContext.Current.CancellationToken);
+        });
 
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>(TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>();
 
         Assert.NotNull(body);
         Assert.Contains("http.get(url, params)", body.Script);
@@ -172,10 +172,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task RunEndpoint_WithWhitespaceScript_ReturnsBadRequest()
     {
         using var client = _factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "   " }, cancellationToken: TestContext.Current.CancellationToken);
+        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "   " });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         Assert.Equal("Test script is required to run k6.", body?["error"]);
     }
 
@@ -183,10 +183,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task RunEndpoint_WithNullScript_ReturnsBadRequest()
     {
         using var client = _factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = null }, cancellationToken: TestContext.Current.CancellationToken);
+        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = null });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         Assert.Equal("Test script is required to run k6.", body?["error"]);
     }
 
@@ -200,10 +200,10 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
             TargetUrl = "https://api.example.com",
             Duration = "5m",
             VirtualUsers = 50
-        }, cancellationToken: TestContext.Current.CancellationToken);
+        });
 
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>(TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<K6ScriptResult>();
 
         Assert.NotNull(body);
         Assert.NotEmpty(body!.Script);

@@ -16,7 +16,7 @@ public class K6RunnerTests
             stdout: new[] { "stub stdout line" },
             stderr: new[] { "stub stderr line" }));
 
-        await runner.RunAsync("console.log('ok');", "sample-script.js", output, TestContext.Current.CancellationToken);
+        await runner.RunAsync("console.log('ok');", "sample-script.js", output, default);
 
         var text = Encoding.UTF8.GetString(output.ToArray());
         Assert.Contains("[out] stub stdout line", text);
@@ -45,7 +45,7 @@ public class K6RunnerTests
         using var output = new MemoryStream();
         var runner = new K6Runner(new FailingProcessRunner());
 
-        await runner.RunAsync("console.log('fail');", "fail.js", output, TestContext.Current.CancellationToken);
+        await runner.RunAsync("console.log('fail');", "fail.js", output, default);
 
         var text = Encoding.UTF8.GetString(output.ToArray());
         Assert.Contains("[error] Failed to start k6 process.", text);
@@ -60,7 +60,7 @@ public class K6RunnerTests
             stderr: new[] { "test failed" },
             exitCode: 1));
 
-        await runner.RunAsync("console.log('test');", "test.js", output, TestContext.Current.CancellationToken);
+        await runner.RunAsync("console.log('test');", "test.js", output, default);
 
         var text = Encoding.UTF8.GetString(output.ToArray());
         Assert.Contains("[out] running test", text);
@@ -76,7 +76,7 @@ public class K6RunnerTests
             stdout: new[] { "line 1", "line 2", "line 3" },
             stderr: Array.Empty<string>()));
 
-        await runner.RunAsync("console.log('test');", "test.js", output, TestContext.Current.CancellationToken);
+        await runner.RunAsync("console.log('test');", "test.js", output, default);
 
         var text = Encoding.UTF8.GetString(output.ToArray());
         Assert.Contains("[out] line 1", text);
@@ -92,7 +92,7 @@ public class K6RunnerTests
             stdout: Array.Empty<string>(),
             stderr: new[] { "error 1", "error 2" }));
 
-        await runner.RunAsync("console.log('test');", "test.js", output, TestContext.Current.CancellationToken);
+        await runner.RunAsync("console.log('test');", "test.js", output, default);
 
         var text = Encoding.UTF8.GetString(output.ToArray());
         Assert.Contains("[err] error 1", text);
@@ -107,7 +107,7 @@ public class K6RunnerTests
             stdout: new[] { "test output" },
             stderr: Array.Empty<string>()));
 
-        await runner.RunAsync("console.log('test');", "", output, TestContext.Current.CancellationToken);
+        await runner.RunAsync("console.log('test');", "", output, default);
 
         var text = Encoding.UTF8.GetString(output.ToArray());
         Assert.Contains("[exit] k6 exited with code 0.", text);
@@ -121,7 +121,7 @@ public class K6RunnerTests
             stdout: new[] { "test output" },
             stderr: Array.Empty<string>()));
 
-        await runner.RunAsync("console.log('test');", null, output, TestContext.Current.CancellationToken);
+        await runner.RunAsync("console.log('test');", null, output, default);
 
         var text = Encoding.UTF8.GetString(output.ToArray());
         Assert.Contains("[exit] k6 exited with code 0.", text);
@@ -135,7 +135,7 @@ public class K6RunnerTests
             stdout: Array.Empty<string>(),
             stderr: Array.Empty<string>()));
 
-        await runner.RunAsync("console.log('test');", "test.js", output, TestContext.Current.CancellationToken);
+        await runner.RunAsync("console.log('test');", "test.js", output, default);
 
         var text = Encoding.UTF8.GetString(output.ToArray());
         Assert.DoesNotContain("[out]", text);
