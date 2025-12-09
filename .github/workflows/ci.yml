@@ -22,10 +22,10 @@ jobs:
         run: dotnet restore k6-tester.slnx
 
       - name: Build
-        run: dotnet build k6-tester.slnx --configuration Release --no-restore
+        run: dotnet build k6-tester.slnx -c Release --no-restore
 
       - name: Test
         run: |
           cd test/k6-tester.Tests/
           dotnet add package GitHubActionsTestLogger
-          dotnet test --logger "GitHubActions;console"
+          dotnet test -c Release --logger "GitHubActions;console"
