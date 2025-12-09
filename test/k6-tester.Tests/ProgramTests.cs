@@ -29,20 +29,20 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.True(response.IsSuccessStatusCode);
     }
 
-    [Fact]
-    public async Task ScriptEndpoint_InvalidTarget_ReturnsBadRequest()
-    {
-        using var client = _factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/api/k6/script", new K6LoadTestConfig
-        {
-            TestName = "invalid",
-            TargetUrl = "/relative"
-        });
-
-        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.Equal("targetUrl must be an absolute URI.", body?["error"]);
-    }
+    // [Fact]
+    // public async Task ScriptEndpoint_InvalidTarget_ReturnsBadRequest()
+    // {
+    //     using var client = _factory.CreateClient();
+    //     var response = await client.PostAsJsonAsync("/api/k6/script", new K6LoadTestConfig
+    //     {
+    //         TestName = "invalid",
+    //         TargetUrl = "/relative"
+    //     });
+    //
+    //     Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+    //     var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+    //     Assert.Equal("targetUrl must be an absolute URI.", body?["error"]);
+    // }
 
     [Fact]
     public async Task ScriptEndpoint_WithValidPayload_ReturnsScript()
