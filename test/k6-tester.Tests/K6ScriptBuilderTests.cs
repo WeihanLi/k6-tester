@@ -1,8 +1,6 @@
 using K6Tester.Models;
 using K6Tester.Services;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-
 namespace K6Tester.Tests;
 
 public class K6ScriptBuilderTests
