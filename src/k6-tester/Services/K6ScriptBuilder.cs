@@ -10,15 +10,8 @@ public interface IK6ScriptBuilder
     K6ScriptResult BuildScript(K6LoadTestConfig config);
 }
 
-public class K6ScriptBuilder : IK6ScriptBuilder
+public partial class K6ScriptBuilder : IK6ScriptBuilder
 {
-    private static readonly Regex FileNameSanitizer = new("[^a-zA-Z0-9_-]+", RegexOptions.Compiled);
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = false
-    };
-
     public K6ScriptResult BuildScript(K6LoadTestConfig config)
     {
         ArgumentNullException.ThrowIfNull(config);
@@ -68,14 +61,14 @@ public class K6ScriptBuilder : IK6ScriptBuilder
 
         if (config.Tags is { Count: > 0 })
         {
-            var tagsJson = JsonSerializer.Serialize(config.Tags, JsonOptions);
+            var tagsJson = JsonSerializer.Serialize(config.Tags, AppSerializerContext.Default.DictionaryStringString);
             builder.AppendLine($"      tags: {tagsJson},");
         }
 
         builder.AppendLine("    },");
         builder.AppendLine("  },");
 
-        if (config.P95ThresholdMs is { } thresholdMs && thresholdMs > 0)
+        if (config.P95ThresholdMs is { } thresholdMs and > 0)
         {
             builder.AppendLine("  thresholds: {");
             builder.AppendLine($"    http_req_duration: ['p(95)<{thresholdMs}'],");
@@ -133,7 +126,7 @@ public class K6ScriptBuilder : IK6ScriptBuilder
     {
         if (headers is { Count: > 0 })
         {
-            var json = JsonSerializer.Serialize(headers, JsonOptions);
+            var json = JsonSerializer.Serialize(headers, AppSerializerContext.Default.DictionaryStringString);
             yield return $"  const params = {{ headers: {json} }};";
         }
         else
@@ -211,4 +204,7 @@ public class K6ScriptBuilder : IK6ScriptBuilder
     private static string EscapeSingleQuotes(string value) => value.Replace("'", "\\'");
 
     private static string EscapeBackticks(string value) => value.Replace("`", "\\`");
+
+    [GeneratedRegex("[^a-zA-Z0-9_-]+", RegexOptions.Compiled)]
+    private static partial Regex FileNameSanitizer { get; }
 }

@@ -8,7 +8,7 @@ COPY src/k6-tester/k6-tester.csproj ./src/k6-tester/
 RUN dotnet restore ./src/k6-tester/k6-tester.csproj -a $TARGETARCH
 
 COPY ./src/k6-tester/ ./src/k6-tester/
-RUN dotnet publish ./src/k6-tester/k6-tester.csproj -a $TARGETARCH -o /app/publish
+RUN dotnet publish ./src/k6-tester/k6-tester.csproj -p PublishAot=false -a $TARGETARCH -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app

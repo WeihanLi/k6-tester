@@ -8,6 +8,11 @@ builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
 builder.Services.AddSingleton<IK6Runner, K6Runner>();
 builder.Services.AddSingleton<IK6ScriptBuilder, K6ScriptBuilder>();
 
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.TypeInfoResolverChain.Add(AppSerializerContext.Default);
+});
+
 var app = builder.Build();
 
 app.UseDefaultFiles();
