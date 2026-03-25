@@ -16,7 +16,7 @@ WORKDIR /app
 ARG TARGETARCH
 
 # k6 releases: https://github.com/grafana/k6/releases/
-ARG K6_VERSION=1.4.2
+ARG K6_VERSION=1.7.0
 ENV K6_VERSION=${K6_VERSION}
 
 RUN set -eux; \
