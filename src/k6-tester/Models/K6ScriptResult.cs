@@ -1,3 +1,7 @@
 namespace K6Tester.Models;
 
-public sealed record K6ScriptResult(string Script, string SuggestedFileName, string Command);
+public sealed record K6ScriptResult(
+    string Script,
+    string SuggestedFileName,
+    string Command,
+    Dictionary<string, string>? EnvironmentVariables = null);

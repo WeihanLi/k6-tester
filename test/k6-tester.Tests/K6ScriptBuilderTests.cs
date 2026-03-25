@@ -592,8 +592,9 @@ public class K6ScriptBuilderTests
 
         var result = _k6ScriptBuilder.BuildScript(config);
 
-        Assert.Contains("K6_OTEL_GRPC_EXPORTER_ENDPOINT=localhost:4317", result.Command);
         Assert.Contains("--out opentelemetry", result.Command);
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("localhost:4317", result.EnvironmentVariables["K6_OTEL_GRPC_EXPORTER_ENDPOINT"]);
     }
 
     [Fact]
@@ -612,8 +613,9 @@ public class K6ScriptBuilderTests
 
         var result = _k6ScriptBuilder.BuildScript(config);
 
-        Assert.Contains("K6_OTEL_HTTP_EXPORTER_ENDPOINT=localhost:4318", result.Command);
         Assert.Contains("--out opentelemetry", result.Command);
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("localhost:4318", result.EnvironmentVariables["K6_OTEL_HTTP_EXPORTER_ENDPOINT"]);
     }
 
     [Fact]
@@ -632,7 +634,8 @@ public class K6ScriptBuilderTests
 
         var result = _k6ScriptBuilder.BuildScript(config);
 
-        Assert.Contains("K6_OTEL_GRPC_EXPORTER_INSECURE=true", result.Command);
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("true", result.EnvironmentVariables["K6_OTEL_GRPC_EXPORTER_INSECURE"]);
     }
 
     [Fact]
@@ -651,7 +654,8 @@ public class K6ScriptBuilderTests
 
         var result = _k6ScriptBuilder.BuildScript(config);
 
-        Assert.Contains("K6_OTEL_SERVICE_NAME=my-service", result.Command);
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("my-service", result.EnvironmentVariables["K6_OTEL_SERVICE_NAME"]);
     }
 
     [Fact]
@@ -670,7 +674,8 @@ public class K6ScriptBuilderTests
 
         var result = _k6ScriptBuilder.BuildScript(config);
 
-        Assert.Contains("K6_OTEL_METRIC_PREFIX=myapp.", result.Command);
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("myapp.", result.EnvironmentVariables["K6_OTEL_METRIC_PREFIX"]);
     }
 
     [Fact]
@@ -689,7 +694,8 @@ public class K6ScriptBuilderTests
 
         var result = _k6ScriptBuilder.BuildScript(config);
 
-        Assert.Contains("K6_OTEL_FLUSH_INTERVAL=2s", result.Command);
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("2s", result.EnvironmentVariables["K6_OTEL_FLUSH_INTERVAL"]);
     }
 
     [Fact]
@@ -708,7 +714,8 @@ public class K6ScriptBuilderTests
 
         var result = _k6ScriptBuilder.BuildScript(config);
 
-        Assert.Contains("K6_OTEL_HTTP_EXPORTER_HEADERS=x-api-key=secret", result.Command);
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("x-api-key=secret", result.EnvironmentVariables["K6_OTEL_HTTP_EXPORTER_HEADERS"]);
     }
 
     [Fact]
@@ -727,7 +734,7 @@ public class K6ScriptBuilderTests
 
         var result = _k6ScriptBuilder.BuildScript(config);
 
-        Assert.DoesNotContain("K6_OTEL_HTTP_EXPORTER_HEADERS", result.Command);
+        Assert.Null(result.EnvironmentVariables?.GetValueOrDefault("K6_OTEL_HTTP_EXPORTER_HEADERS"));
     }
 
     [Fact]
@@ -743,6 +750,7 @@ public class K6ScriptBuilderTests
 
         Assert.Equal("k6 run nooutput.js", result.Command);
         Assert.DoesNotContain("--out", result.Command);
+        Assert.Null(result.EnvironmentVariables);
     }
 
     [Fact]
@@ -762,7 +770,7 @@ public class K6ScriptBuilderTests
         var result = _k6ScriptBuilder.BuildScript(config);
 
         Assert.Contains("--out influxdb=http://localhost:8086/k6", result.Command);
-        Assert.DoesNotContain("K6_OTEL", result.Command);
+        Assert.Null(result.EnvironmentVariables);
     }
 
     [Fact]
@@ -782,6 +790,7 @@ public class K6ScriptBuilderTests
         var result = _k6ScriptBuilder.BuildScript(config);
 
         Assert.Contains("--out json=/tmp/results.json", result.Command);
+        Assert.Null(result.EnvironmentVariables);
     }
 
     [Fact]
@@ -798,5 +807,6 @@ public class K6ScriptBuilderTests
 
         Assert.Contains("--out cloud", result.Command);
         Assert.DoesNotContain("--out cloud=", result.Command);
+        Assert.Null(result.EnvironmentVariables);
     }
 }
