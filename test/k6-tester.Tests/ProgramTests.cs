@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text;
 using K6Tester.Models;
 using K6Tester.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -69,6 +70,9 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "" });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("Test script is required to run k6.", problem?.Detail);
     }
 
     [Fact]
@@ -173,6 +177,9 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "   " });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("Test script is required to run k6.", problem?.Detail);
     }
 
     [Fact]
@@ -182,6 +189,9 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = null });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("Test script is required to run k6.", problem?.Detail);
     }
 
     [Fact]
@@ -195,6 +205,9 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("Output 'type' is required when an output configuration is provided.", problem?.Detail);
     }
 
     [Fact]
