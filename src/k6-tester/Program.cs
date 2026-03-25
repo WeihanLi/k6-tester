@@ -25,7 +25,7 @@ app.MapPost("/api/k6/script", (K6LoadTestConfig config, [FromServices] IK6Script
 {
     if (!Uri.TryCreate(config.TargetUrl, UriKind.Absolute, out _))
     {
-        return Results.BadRequest(new { error = "targetUrl must be an absolute URI." });
+        return Results.Problem(detail: "targetUrl must be an absolute URI.", statusCode: 400);
     }
 
     var result = scriptBuilder.BuildScript(config);
@@ -36,7 +36,12 @@ app.MapPost("/api/k6/run", (HttpContext httpContext, K6RunRequest request) =>
 {
     if (string.IsNullOrWhiteSpace(request?.Script))
     {
-        return Results.BadRequest(new { error = "Test script is required to run k6." });
+        return Results.Problem(detail: "Test script is required to run k6.", statusCode: 400);
+    }
+
+    if (request.Output is not null && string.IsNullOrWhiteSpace(request.Output.Type))
+    {
+        return Results.Problem(detail: "Output 'type' is required when an output configuration is provided.", statusCode: 400);
     }
 
     httpContext.Response.Headers.CacheControl = "no-cache";
@@ -50,7 +55,7 @@ app.MapPost("/api/k6/run", (HttpContext httpContext, K6RunRequest request) =>
     return Results.Stream(async stream =>
     {
         await httpContext.RequestServices.GetRequiredService<IK6Runner>()
-            .RunAsync(scriptToRun, fileName, stream, httpContext.RequestAborted);
+            .RunAsync(scriptToRun, fileName, stream, httpContext.RequestAborted, request.Output);
     }, "text/plain; charset=utf-8");
 });
 

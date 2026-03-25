@@ -1,12 +1,13 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using K6Tester.Models;
 
 namespace K6Tester.Services;
 
 public interface IK6Runner
 {
-    Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken);
+    Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OutputConfig? output = null);
 }
 
 public sealed class K6Runner : IK6Runner
@@ -19,7 +20,7 @@ public sealed class K6Runner : IK6Runner
         _processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
     }
 
-    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken)
+    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OutputConfig? output = null)
     {
         ArgumentNullException.ThrowIfNull(outputStream);
 
@@ -45,6 +46,34 @@ public sealed class K6Runner : IK6Runner
             };
 
             startInfo.ArgumentList.Add("run");
+
+            if (output is not null)
+            {
+                var type = output.Type?.Trim().ToLowerInvariant();
+                if (string.IsNullOrWhiteSpace(type))
+                {
+                    await WriteLineAsync(outputStream, "[error] Invalid k6 output configuration: 'Type' is required when 'output' is specified.", cancellationToken);
+                    return;
+                }
+
+                var needsUrl = type is not "opentelemetry" and not "cloud";
+                var url = needsUrl ? output.Url?.Trim() : null;
+                startInfo.ArgumentList.Add("--out");
+                var outArg = string.IsNullOrWhiteSpace(url)
+                    ? type
+                    : $"{type}={url}";
+                startInfo.ArgumentList.Add(outArg);
+
+                var isOtel = string.Equals(type, "opentelemetry", StringComparison.OrdinalIgnoreCase);
+                if (isOtel && output.OpenTelemetry is { } otelConfig)
+                {
+                    foreach (var (key, value) in K6ScriptBuilder.BuildOtelEnvironmentVariables(otelConfig))
+                    {
+                        startInfo.Environment[key] = value;
+                    }
+                }
+            }
+
             startInfo.ArgumentList.Add(tempFilePath);
 
             if (!_processRunner.TryStart(startInfo, out var process) || process is null)

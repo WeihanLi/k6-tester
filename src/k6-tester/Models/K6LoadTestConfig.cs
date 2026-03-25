@@ -25,4 +25,6 @@ public sealed class K6LoadTestConfig
     public Dictionary<string, string>? Tags { get; set; }
 
     public bool CheckResponse { get; set; } = true;
+
+    public K6OutputConfig? Output { get; set; }
 }

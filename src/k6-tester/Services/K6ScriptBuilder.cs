@@ -21,9 +21,10 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
         var fileName = $"{scenarioName}.js";
 
         var script = GenerateScript(config, method, scenarioName);
-        var command = $"k6 run {fileName}";
+        var command = BuildCommand(fileName, config.Output);
+        var envVars = BuildOutputEnvironmentVariables(config.Output);
 
-        return new K6ScriptResult(script, fileName, command);
+        return new K6ScriptResult(script, fileName, command, envVars.Count > 0 ? envVars : null);
     }
 
     private static string GenerateScript(K6LoadTestConfig config, string method, string scenarioName)
@@ -204,6 +205,87 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
     private static string EscapeSingleQuotes(string value) => value.Replace("'", "\\'");
 
     private static string EscapeBackticks(string value) => value.Replace("`", "\\`");
+
+    private static string BuildCommand(string fileName, K6OutputConfig? output)
+    {
+        if (output is null)
+        {
+            return $"k6 run {fileName}";
+        }
+
+        var type = output.Type?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            return $"k6 run {fileName}";
+        }
+
+        var needsUrl = type is not "opentelemetry" and not "cloud";
+        var url = needsUrl ? output.Url?.Trim() : null;
+        var outArg = string.IsNullOrWhiteSpace(url)
+            ? type
+            : $"{type}={url}";
+
+        return $"k6 run --out {outArg} {fileName}";
+    }
+
+    private static Dictionary<string, string> BuildOutputEnvironmentVariables(K6OutputConfig? output)
+    {
+        if (output is null || string.IsNullOrWhiteSpace(output.Type))
+        {
+            return new Dictionary<string, string>();
+        }
+
+        var isOtel = string.Equals(output.Type.Trim(), "opentelemetry", StringComparison.OrdinalIgnoreCase) &&
+                     output.OpenTelemetry is not null;
+
+        return isOtel
+            ? BuildOtelEnvironmentVariables(output.OpenTelemetry!)
+            : new Dictionary<string, string>();
+    }
+
+    internal static Dictionary<string, string> BuildOtelEnvironmentVariables(K6OtelOutputConfig otelOutput)
+    {
+        var env = new Dictionary<string, string>();
+        var isHttp = string.Equals(otelOutput.Protocol, "http", StringComparison.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.Endpoint))
+        {
+            var key = isHttp
+                ? "K6_OTEL_HTTP_EXPORTER_ENDPOINT"
+                : "K6_OTEL_GRPC_EXPORTER_ENDPOINT";
+            env[key] = otelOutput.Endpoint.Trim();
+        }
+
+        if (otelOutput.Insecure)
+        {
+            var key = isHttp
+                ? "K6_OTEL_HTTP_EXPORTER_INSECURE"
+                : "K6_OTEL_GRPC_EXPORTER_INSECURE";
+            env[key] = "true";
+        }
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.Headers) && isHttp)
+        {
+            env["K6_OTEL_HTTP_EXPORTER_HEADERS"] = otelOutput.Headers.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.ServiceName))
+        {
+            env["K6_OTEL_SERVICE_NAME"] = otelOutput.ServiceName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.MetricPrefix))
+        {
+            env["K6_OTEL_METRIC_PREFIX"] = otelOutput.MetricPrefix.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.FlushInterval))
+        {
+            env["K6_OTEL_FLUSH_INTERVAL"] = otelOutput.FlushInterval.Trim();
+        }
+
+        return env;
+    }
 
     [GeneratedRegex("[^a-zA-Z0-9_-]+", RegexOptions.Compiled)]
     private static partial Regex FileNameSanitizer { get; }

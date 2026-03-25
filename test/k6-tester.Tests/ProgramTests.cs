@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text;
 using K6Tester.Models;
 using K6Tester.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -69,8 +70,9 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "" });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.Equal("Test script is required to run k6.", body?["error"]);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("Test script is required to run k6.", problem?.Detail);
     }
 
     [Fact]
@@ -175,8 +177,9 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "   " });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.Equal("Test script is required to run k6.", body?["error"]);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("Test script is required to run k6.", problem?.Detail);
     }
 
     [Fact]
@@ -186,8 +189,25 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = null });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.Equal("Test script is required to run k6.", body?["error"]);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("Test script is required to run k6.", problem?.Detail);
+    }
+
+    [Fact]
+    public async Task RunEndpoint_WithOutputAndEmptyType_ReturnsBadRequest()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest
+        {
+            Script = "export default function() {}",
+            Output = new K6OutputConfig { Type = "" }
+        });
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.Equal("Output 'type' is required when an output configuration is provided.", problem?.Detail);
     }
 
     [Fact]
@@ -231,7 +251,7 @@ class MockK6Runner(string output, string exit, string? errorOutput = null) : IK6
 
     public static IK6Runner Error { get; } = new MockK6Runner("", "k6 exited with code 1.", "stub stderr line");
 
-    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken)
+    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OutputConfig? outputConfig = null)
     {
         ArgumentNullException.ThrowIfNull(outputStream);
 
