@@ -809,4 +809,68 @@ public class K6ScriptBuilderTests
         Assert.DoesNotContain("--out cloud=", result.Command);
         Assert.Null(result.EnvironmentVariables);
     }
+
+    [Fact]
+    public void BuildScript_WithOutputEmptyType_CommandHasNoOutFlag()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "EmptyType",
+            TargetUrl = "https://example.com",
+            Output = new K6OutputConfig { Type = "" }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.DoesNotContain("--out", result.Command);
+        Assert.Null(result.EnvironmentVariables);
+    }
+
+    [Fact]
+    public void BuildScript_WithOutputWhitespaceType_CommandHasNoOutFlag()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "WhitespaceType",
+            TargetUrl = "https://example.com",
+            Output = new K6OutputConfig { Type = "   " }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.DoesNotContain("--out", result.Command);
+        Assert.Null(result.EnvironmentVariables);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelOutputAndStaleUrl_IgnoresUrl()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelStaleUrl",
+            TargetUrl = "https://example.com",
+            Output = new K6OutputConfig { Type = "opentelemetry", Url = "http://stale-value" }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("k6 run --out opentelemetry otelstaleurl.js", result.Command);
+        Assert.DoesNotContain("stale-value", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithCloudOutputAndStaleUrl_IgnoresUrl()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "CloudStaleUrl",
+            TargetUrl = "https://example.com",
+            Output = new K6OutputConfig { Type = "cloud", Url = "http://stale-value" }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("k6 run --out cloud cloudstaleurl.js", result.Command);
+        Assert.DoesNotContain("stale-value", result.Command);
+    }
 }

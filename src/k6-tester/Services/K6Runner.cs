@@ -49,13 +49,22 @@ public sealed class K6Runner : IK6Runner
 
             if (output is not null)
             {
+                var type = output.Type?.Trim().ToLowerInvariant();
+                if (string.IsNullOrWhiteSpace(type))
+                {
+                    await WriteLineAsync(outputStream, "[error] Invalid k6 output configuration: 'Type' is required when 'output' is specified.", cancellationToken);
+                    return;
+                }
+
+                var needsUrl = type is not "opentelemetry" and not "cloud";
+                var url = needsUrl ? output.Url?.Trim() : null;
                 startInfo.ArgumentList.Add("--out");
-                var outArg = string.IsNullOrWhiteSpace(output.Url)
-                    ? output.Type
-                    : $"{output.Type}={output.Url}";
+                var outArg = string.IsNullOrWhiteSpace(url)
+                    ? type
+                    : $"{type}={url}";
                 startInfo.ArgumentList.Add(outArg);
 
-                var isOtel = string.Equals(output.Type, "opentelemetry", StringComparison.OrdinalIgnoreCase);
+                var isOtel = string.Equals(type, "opentelemetry", StringComparison.OrdinalIgnoreCase);
                 if (isOtel && output.OpenTelemetry is { } otelConfig)
                 {
                     foreach (var (key, value) in K6ScriptBuilder.BuildOtelEnvironmentVariables(otelConfig))

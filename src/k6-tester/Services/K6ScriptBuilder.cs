@@ -213,21 +213,33 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
             return $"k6 run {fileName}";
         }
 
-        var outArg = string.IsNullOrWhiteSpace(output.Url)
-            ? output.Type
-            : $"{output.Type}={output.Url}";
+        var type = output.Type?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            return $"k6 run {fileName}";
+        }
+
+        var needsUrl = type is not "opentelemetry" and not "cloud";
+        var url = needsUrl ? output.Url?.Trim() : null;
+        var outArg = string.IsNullOrWhiteSpace(url)
+            ? type
+            : $"{type}={url}";
 
         return $"k6 run --out {outArg} {fileName}";
     }
 
     private static Dictionary<string, string> BuildOutputEnvironmentVariables(K6OutputConfig? output)
     {
-        var isOtel = output is not null &&
-                     string.Equals(output.Type, "opentelemetry", StringComparison.OrdinalIgnoreCase) &&
+        if (output is null || string.IsNullOrWhiteSpace(output.Type))
+        {
+            return new Dictionary<string, string>();
+        }
+
+        var isOtel = string.Equals(output.Type.Trim(), "opentelemetry", StringComparison.OrdinalIgnoreCase) &&
                      output.OpenTelemetry is not null;
 
         return isOtel
-            ? BuildOtelEnvironmentVariables(output!.OpenTelemetry!)
+            ? BuildOtelEnvironmentVariables(output.OpenTelemetry!)
             : new Dictionary<string, string>();
     }
 

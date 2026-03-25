@@ -1191,6 +1191,8 @@
       };
       const urlInput = document.getElementById("outputUrl");
       urlInput.placeholder = urlPlaceholders[type] ?? "";
+      const protocol = document.getElementById("otelProtocol").value;
+      document.getElementById("otelHeadersGroup").style.display = (isOtel && protocol === "http") ? "" : "none";
     }
 
     document.getElementById("outputEnabled").addEventListener("change", function () {
@@ -1515,7 +1517,8 @@
       }
 
       const type = formData.get("outputType")?.toString() ?? "opentelemetry";
-      const url = formData.get("outputUrl")?.toString().trim() ?? "";
+      const needsUrl = ["influxdb", "json", "csv"].includes(type);
+      const url = needsUrl ? (formData.get("outputUrl")?.toString().trim() ?? "") : "";
 
       const outputPayload = {
         type,

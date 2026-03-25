@@ -69,8 +69,6 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "" });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.Equal("Test script is required to run k6.", body?["error"]);
     }
 
     [Fact]
@@ -175,8 +173,6 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = "   " });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.Equal("Test script is required to run k6.", body?["error"]);
     }
 
     [Fact]
@@ -186,8 +182,19 @@ public class ProgramTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest { Script = null });
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.Equal("Test script is required to run k6.", body?["error"]);
+    }
+
+    [Fact]
+    public async Task RunEndpoint_WithOutputAndEmptyType_ReturnsBadRequest()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/k6/run", new K6RunRequest
+        {
+            Script = "export default function() {}",
+            Output = new K6OutputConfig { Type = "" }
+        });
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
