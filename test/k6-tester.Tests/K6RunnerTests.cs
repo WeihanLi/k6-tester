@@ -153,15 +153,19 @@ public class K6RunnerTests
             stderr: Array.Empty<string>());
         var runner = new K6Runner(capturingRunner);
 
-        var otelConfig = new K6OtelOutputConfig
+        var outputConfig = new K6OutputConfig
         {
-            Protocol = "grpc",
-            Endpoint = "localhost:4317",
-            ServiceName = "my-service",
-            Insecure = true
+            Type = "opentelemetry",
+            OpenTelemetry = new K6OtelOutputConfig
+            {
+                Protocol = "grpc",
+                Endpoint = "localhost:4317",
+                ServiceName = "my-service",
+                Insecure = true
+            }
         };
 
-        await runner.RunAsync("console.log('ok');", "test.js", output, default, otelConfig);
+        await runner.RunAsync("console.log('ok');", "test.js", output, default, outputConfig);
 
         var args = capturingRunner.CapturedStartInfo!.ArgumentList;
         Assert.Contains("--out", args);
@@ -182,14 +186,18 @@ public class K6RunnerTests
             stderr: Array.Empty<string>());
         var runner = new K6Runner(capturingRunner);
 
-        var otelConfig = new K6OtelOutputConfig
+        var outputConfig = new K6OutputConfig
         {
-            Protocol = "http",
-            Endpoint = "localhost:4318",
-            Headers = "x-api-key=secret"
+            Type = "opentelemetry",
+            OpenTelemetry = new K6OtelOutputConfig
+            {
+                Protocol = "http",
+                Endpoint = "localhost:4318",
+                Headers = "x-api-key=secret"
+            }
         };
 
-        await runner.RunAsync("console.log('ok');", "test.js", output, default, otelConfig);
+        await runner.RunAsync("console.log('ok');", "test.js", output, default, outputConfig);
 
         var env = capturingRunner.CapturedStartInfo!.Environment;
         Assert.Equal("localhost:4318", env["K6_OTEL_HTTP_EXPORTER_ENDPOINT"]);
@@ -197,7 +205,29 @@ public class K6RunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_WithoutOtelOutput_DoesNotAddOutArg()
+    public async Task RunAsync_WithInfluxDbOutput_AddsOutArgWithUrl()
+    {
+        using var output = new MemoryStream();
+        var capturingRunner = new CapturingProcessRunner(
+            stdout: Array.Empty<string>(),
+            stderr: Array.Empty<string>());
+        var runner = new K6Runner(capturingRunner);
+
+        var outputConfig = new K6OutputConfig
+        {
+            Type = "influxdb",
+            Url = "http://localhost:8086/k6"
+        };
+
+        await runner.RunAsync("console.log('ok');", "test.js", output, default, outputConfig);
+
+        var args = capturingRunner.CapturedStartInfo!.ArgumentList;
+        Assert.Contains("--out", args);
+        Assert.Contains("influxdb=http://localhost:8086/k6", args);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithoutOutput_DoesNotAddOutArg()
     {
         using var output = new MemoryStream();
         var capturingRunner = new CapturingProcessRunner(
@@ -209,7 +239,6 @@ public class K6RunnerTests
 
         var args = capturingRunner.CapturedStartInfo!.ArgumentList;
         Assert.DoesNotContain("--out", args);
-        Assert.DoesNotContain("opentelemetry", args);
     }
 
     private sealed class FailingProcessRunner : IProcessRunner

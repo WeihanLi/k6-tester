@@ -6,5 +6,5 @@ public sealed class K6RunRequest
 
     public string? FileName { get; set; }
 
-    public K6OtelOutputConfig? OtelOutput { get; set; }
+    public K6OutputConfig? Output { get; set; }
 }

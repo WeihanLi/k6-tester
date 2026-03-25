@@ -26,5 +26,5 @@ public sealed class K6LoadTestConfig
 
     public bool CheckResponse { get; set; } = true;
 
-    public K6OtelOutputConfig? OtelOutput { get; set; }
+    public K6OutputConfig? Output { get; set; }
 }

@@ -231,7 +231,7 @@ class MockK6Runner(string output, string exit, string? errorOutput = null) : IK6
 
     public static IK6Runner Error { get; } = new MockK6Runner("", "k6 exited with code 1.", "stub stderr line");
 
-    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OtelOutputConfig? otelOutput = null)
+    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OutputConfig? outputConfig = null)
     {
         ArgumentNullException.ThrowIfNull(outputStream);
 

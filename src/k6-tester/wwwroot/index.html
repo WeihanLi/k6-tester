@@ -803,50 +803,69 @@
 
           <div>
             <div class="inline" style="justify-content: space-between;">
-              <h3 style="margin: 1rem 0 0.35rem; font-size: 0.95rem;">OpenTelemetry Output</h3>
+              <h3 style="margin: 1rem 0 0.35rem; font-size: 0.95rem;">Output</h3>
               <label style="margin: 0; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-                <input type="checkbox" id="otelEnabled" name="otelEnabled">
+                <input type="checkbox" id="outputEnabled" name="outputEnabled">
                 Enable
               </label>
             </div>
-            <div class="helper">Push metrics to an OpenTelemetry collector using <code>--out opentelemetry</code>.</div>
-            <div id="otelFields" style="display: none; margin-top: 0.5rem;">
-              <div class="fields">
+            <div class="helper">Export metrics to an external backend using <code>--out</code>.</div>
+            <div id="outputFields" style="display: none; margin-top: 0.5rem;">
+              <div class="fields" style="margin-bottom: 0.5rem;">
                 <div>
-                  <label for="otelProtocol">Protocol</label>
-                  <select id="otelProtocol" name="otelProtocol">
-                    <option value="grpc">gRPC</option>
-                    <option value="http">HTTP</option>
+                  <label for="outputType">Output type</label>
+                  <select id="outputType" name="outputType">
+                    <option value="opentelemetry">OpenTelemetry</option>
+                    <option value="influxdb">InfluxDB</option>
+                    <option value="json">JSON</option>
+                    <option value="csv">CSV</option>
+                    <option value="cloud">Grafana Cloud k6</option>
                   </select>
                 </div>
-                <div>
-                  <label for="otelEndpoint">Endpoint</label>
-                  <input type="text" id="otelEndpoint" name="otelEndpoint" placeholder="localhost:4317">
-                  <div class="helper">gRPC: host:port &nbsp;|&nbsp; HTTP: host:port</div>
-                </div>
-                <div>
-                  <label for="otelServiceName">Service name</label>
-                  <input type="text" id="otelServiceName" name="otelServiceName" placeholder="k6">
-                </div>
-                <div>
-                  <label for="otelMetricPrefix">Metric prefix</label>
-                  <input type="text" id="otelMetricPrefix" name="otelMetricPrefix" placeholder="k6.">
-                </div>
-                <div>
-                  <label for="otelFlushInterval">Flush interval</label>
-                  <input type="text" id="otelFlushInterval" name="otelFlushInterval" placeholder="1s">
-                </div>
-                <div>
-                  <label for="otelInsecure">
-                    <input type="checkbox" id="otelInsecure" name="otelInsecure">
-                    Disable TLS (insecure)
-                  </label>
+                <div id="outputUrlGroup">
+                  <label for="outputUrl">URL / path</label>
+                  <input type="text" id="outputUrl" name="outputUrl" placeholder="http://localhost:8086/k6">
+                  <div class="helper" id="outputUrlHelper">Used as the value in <code>--out type=value</code>.</div>
                 </div>
               </div>
-              <div id="otelHeadersGroup" style="margin-top: 0.5rem;">
-                <label for="otelHeaders">HTTP headers</label>
-                <input type="text" id="otelHeaders" name="otelHeaders" placeholder="x-api-key=secret,another=value">
-                <div class="helper">Only used for HTTP protocol. Comma-separated key=value pairs.</div>
+              <div id="otelFields">
+                <div class="fields">
+                  <div>
+                    <label for="otelProtocol">Protocol</label>
+                    <select id="otelProtocol" name="otelProtocol">
+                      <option value="grpc">gRPC</option>
+                      <option value="http">HTTP</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="otelEndpoint">Endpoint</label>
+                    <input type="text" id="otelEndpoint" name="otelEndpoint" placeholder="localhost:4317">
+                    <div class="helper">gRPC: host:port &nbsp;|&nbsp; HTTP: host:port</div>
+                  </div>
+                  <div>
+                    <label for="otelServiceName">Service name</label>
+                    <input type="text" id="otelServiceName" name="otelServiceName" placeholder="k6">
+                  </div>
+                  <div>
+                    <label for="otelMetricPrefix">Metric prefix</label>
+                    <input type="text" id="otelMetricPrefix" name="otelMetricPrefix" placeholder="k6.">
+                  </div>
+                  <div>
+                    <label for="otelFlushInterval">Flush interval</label>
+                    <input type="text" id="otelFlushInterval" name="otelFlushInterval" placeholder="1s">
+                  </div>
+                  <div>
+                    <label for="otelInsecure">
+                      <input type="checkbox" id="otelInsecure" name="otelInsecure">
+                      Disable TLS (insecure)
+                    </label>
+                  </div>
+                </div>
+                <div id="otelHeadersGroup" style="margin-top: 0.5rem;">
+                  <label for="otelHeaders">HTTP headers</label>
+                  <input type="text" id="otelHeaders" name="otelHeaders" placeholder="x-api-key=secret,another=value">
+                  <div class="helper">Only used for HTTP protocol. Comma-separated key=value pairs.</div>
+                </div>
               </div>
             </div>
           </div>
@@ -1155,9 +1174,31 @@
     tagsBody.addEventListener("click", handleRowRemoval);
     httpMethodSelect.addEventListener("change", onMethodChange);
 
-    document.getElementById("otelEnabled").addEventListener("change", function () {
-      document.getElementById("otelFields").style.display = this.checked ? "" : "none";
+    function onOutputTypeChange() {
+      const enabled = document.getElementById("outputEnabled").checked;
+      if (!enabled) {
+        return;
+      }
+      const type = document.getElementById("outputType").value;
+      const isOtel = type === "opentelemetry";
+      const needsUrl = ["influxdb", "json", "csv"].includes(type);
+      document.getElementById("otelFields").style.display = isOtel ? "" : "none";
+      document.getElementById("outputUrlGroup").style.display = needsUrl ? "" : "none";
+      const urlPlaceholders = {
+        influxdb: "http://localhost:8086/k6",
+        json: "/tmp/results.json",
+        csv: "/tmp/results.csv"
+      };
+      const urlInput = document.getElementById("outputUrl");
+      urlInput.placeholder = urlPlaceholders[type] ?? "";
+    }
+
+    document.getElementById("outputEnabled").addEventListener("change", function () {
+      document.getElementById("outputFields").style.display = this.checked ? "" : "none";
+      onOutputTypeChange();
     });
+
+    document.getElementById("outputType").addEventListener("change", onOutputTypeChange);
 
     document.getElementById("otelProtocol").addEventListener("change", function () {
       document.getElementById("otelHeadersGroup").style.display = this.value === "http" ? "" : "none";
@@ -1454,7 +1495,7 @@
         p95ThresholdMs: parseOptionalNumber(formData.get("p95Threshold")),
         tags: gatherKeyValues(tagsBody),
         checkResponse: formData.get("checkResponse") === "on",
-        otelOutput: buildOtelPayload(formData)
+        output: buildOutputPayload(formData)
       };
 
       if (!["POST", "PUT", "PATCH"].includes(method)) {
@@ -1468,28 +1509,41 @@
       return payload;
     }
 
-    function buildOtelPayload(formData) {
-      if (formData.get("otelEnabled") !== "on") {
+    function buildOutputPayload(formData) {
+      if (formData.get("outputEnabled") !== "on") {
         return null;
       }
 
-      const protocol = formData.get("otelProtocol")?.toString() ?? "grpc";
-      const endpoint = formData.get("otelEndpoint")?.toString().trim() ?? "";
-      const serviceName = formData.get("otelServiceName")?.toString().trim() ?? "";
-      const metricPrefix = formData.get("otelMetricPrefix")?.toString().trim() ?? "";
-      const flushInterval = formData.get("otelFlushInterval")?.toString().trim() ?? "";
-      const insecure = formData.get("otelInsecure") === "on";
-      const headers = formData.get("otelHeaders")?.toString().trim() ?? "";
+      const type = formData.get("outputType")?.toString() ?? "opentelemetry";
+      const url = formData.get("outputUrl")?.toString().trim() ?? "";
 
-      return {
-        protocol,
-        endpoint: endpoint || null,
-        insecure,
-        serviceName: serviceName || null,
-        metricPrefix: metricPrefix || null,
-        flushInterval: flushInterval || null,
-        headers: (protocol === "http" && headers) ? headers : null
+      const outputPayload = {
+        type,
+        url: url || null,
+        openTelemetry: null
       };
+
+      if (type === "opentelemetry") {
+        const protocol = formData.get("otelProtocol")?.toString() ?? "grpc";
+        const endpoint = formData.get("otelEndpoint")?.toString().trim() ?? "";
+        const serviceName = formData.get("otelServiceName")?.toString().trim() ?? "";
+        const metricPrefix = formData.get("otelMetricPrefix")?.toString().trim() ?? "";
+        const flushInterval = formData.get("otelFlushInterval")?.toString().trim() ?? "";
+        const insecure = formData.get("otelInsecure") === "on";
+        const headers = formData.get("otelHeaders")?.toString().trim() ?? "";
+
+        outputPayload.openTelemetry = {
+          protocol,
+          endpoint: endpoint || null,
+          insecure,
+          serviceName: serviceName || null,
+          metricPrefix: metricPrefix || null,
+          flushInterval: flushInterval || null,
+          headers: (protocol === "http" && headers) ? headers : null
+        };
+      }
+
+      return outputPayload;
     }
 
     function parseOptionalNumber(value) {
@@ -1601,13 +1655,13 @@
       }
 
       persistScript(script);
-      const otelOutput = buildOtelPayload(new FormData(configForm));
+      const output = buildOutputPayload(new FormData(configForm));
       const payload = {
         script,
         fileName: fileNameSpan.textContent && fileNameSpan.textContent !== "—"
           ? fileNameSpan.textContent
           : "k6-script.js",
-        otelOutput
+        output
       };
       currentRunController = new AbortController();
       clearRunOutput();
@@ -1948,9 +2002,11 @@
       tagsBody.innerHTML = "";
       defaults.tags.forEach(tag => addKeyValueRow(tagsBody, tag));
 
-      document.getElementById("otelEnabled").checked = false;
-      document.getElementById("otelFields").style.display = "none";
+      document.getElementById("outputEnabled").checked = false;
+      document.getElementById("outputFields").style.display = "none";
+      document.getElementById("otelFields").style.display = "";
       document.getElementById("otelHeadersGroup").style.display = "none";
+      document.getElementById("outputUrlGroup").style.display = "none";
 
       onMethodChange();
       setScriptContent("", { persist: !preserveScriptStorage });

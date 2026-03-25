@@ -21,7 +21,7 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
         var fileName = $"{scenarioName}.js";
 
         var script = GenerateScript(config, method, scenarioName);
-        var command = BuildCommand(fileName, config.OtelOutput);
+        var command = BuildCommand(fileName, config.Output);
 
         return new K6ScriptResult(script, fileName, command);
     }
@@ -205,19 +205,29 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
 
     private static string EscapeBackticks(string value) => value.Replace("`", "\\`");
 
-    private static string BuildCommand(string fileName, K6OtelOutputConfig? otelOutput)
+    private static string BuildCommand(string fileName, K6OutputConfig? output)
     {
-        if (otelOutput is null)
+        if (output is null)
         {
             return $"k6 run {fileName}";
         }
 
-        var envVars = BuildOtelEnvironmentVariables(otelOutput);
-        var envPrefix = envVars.Count > 0
-            ? string.Join(" ", envVars.Select(kv => $"{kv.Key}={kv.Value}")) + " "
-            : string.Empty;
+        var outArg = string.IsNullOrWhiteSpace(output.Url)
+            ? output.Type
+            : $"{output.Type}={output.Url}";
 
-        return $"{envPrefix}k6 run --out opentelemetry {fileName}";
+        var isOtel = string.Equals(output.Type, "opentelemetry", StringComparison.OrdinalIgnoreCase);
+        if (isOtel && output.OpenTelemetry is { } otelConfig)
+        {
+            var envVars = BuildOtelEnvironmentVariables(otelConfig);
+            var envPrefix = envVars.Count > 0
+                ? string.Join(" ", envVars.Select(kv => $"{kv.Key}={kv.Value}")) + " "
+                : string.Empty;
+
+            return $"{envPrefix}k6 run --out {outArg} {fileName}";
+        }
+
+        return $"k6 run --out {outArg} {fileName}";
     }
 
     internal static Dictionary<string, string> BuildOtelEnvironmentVariables(K6OtelOutputConfig otelOutput)

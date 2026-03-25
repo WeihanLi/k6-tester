@@ -7,7 +7,7 @@ namespace K6Tester.Services;
 
 public interface IK6Runner
 {
-    Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OtelOutputConfig? otelOutput = null);
+    Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OutputConfig? output = null);
 }
 
 public sealed class K6Runner : IK6Runner
@@ -20,7 +20,7 @@ public sealed class K6Runner : IK6Runner
         _processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
     }
 
-    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OtelOutputConfig? otelOutput = null)
+    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OutputConfig? output = null)
     {
         ArgumentNullException.ThrowIfNull(outputStream);
 
@@ -47,14 +47,21 @@ public sealed class K6Runner : IK6Runner
 
             startInfo.ArgumentList.Add("run");
 
-            if (otelOutput is not null)
+            if (output is not null)
             {
                 startInfo.ArgumentList.Add("--out");
-                startInfo.ArgumentList.Add("opentelemetry");
+                var outArg = string.IsNullOrWhiteSpace(output.Url)
+                    ? output.Type
+                    : $"{output.Type}={output.Url}";
+                startInfo.ArgumentList.Add(outArg);
 
-                foreach (var (key, value) in K6ScriptBuilder.BuildOtelEnvironmentVariables(otelOutput))
+                var isOtel = string.Equals(output.Type, "opentelemetry", StringComparison.OrdinalIgnoreCase);
+                if (isOtel && output.OpenTelemetry is { } otelConfig)
                 {
-                    startInfo.Environment[key] = value;
+                    foreach (var (key, value) in K6ScriptBuilder.BuildOtelEnvironmentVariables(otelConfig))
+                    {
+                        startInfo.Environment[key] = value;
+                    }
                 }
             }
 
