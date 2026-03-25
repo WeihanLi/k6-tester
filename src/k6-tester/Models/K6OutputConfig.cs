@@ -9,7 +9,7 @@ public sealed class K6OutputConfig
     /// The output type name as understood by k6, e.g. "opentelemetry", "influxdb", "json", "csv", "cloud".
     /// Maps directly to the value passed to <c>--out</c>.
     /// </summary>
-    public string Type { get; set; } = "opentelemetry";
+    public string? Type { get; set; }
 
     /// <summary>
     /// Optional value appended to the type: <c>--out {Type}={Url}</c>.
