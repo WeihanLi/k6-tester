@@ -1,12 +1,13 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using K6Tester.Models;
 
 namespace K6Tester.Services;
 
 public interface IK6Runner
 {
-    Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken);
+    Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OtelOutputConfig? otelOutput = null);
 }
 
 public sealed class K6Runner : IK6Runner
@@ -19,7 +20,7 @@ public sealed class K6Runner : IK6Runner
         _processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
     }
 
-    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken)
+    public async Task RunAsync(string script, string? fileNameHint, Stream outputStream, CancellationToken cancellationToken, K6OtelOutputConfig? otelOutput = null)
     {
         ArgumentNullException.ThrowIfNull(outputStream);
 
@@ -45,6 +46,18 @@ public sealed class K6Runner : IK6Runner
             };
 
             startInfo.ArgumentList.Add("run");
+
+            if (otelOutput is not null)
+            {
+                startInfo.ArgumentList.Add("--out");
+                startInfo.ArgumentList.Add("opentelemetry");
+
+                foreach (var (key, value) in K6ScriptBuilder.BuildOtelEnvironmentVariables(otelOutput))
+                {
+                    startInfo.Environment[key] = value;
+                }
+            }
+
             startInfo.ArgumentList.Add(tempFilePath);
 
             if (!_processRunner.TryStart(startInfo, out var process) || process is null)

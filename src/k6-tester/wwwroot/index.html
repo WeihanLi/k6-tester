@@ -801,6 +801,56 @@
             <div class="helper">Only used for POST, PUT and PATCH requests</div>
           </div>
 
+          <div>
+            <div class="inline" style="justify-content: space-between;">
+              <h3 style="margin: 1rem 0 0.35rem; font-size: 0.95rem;">OpenTelemetry Output</h3>
+              <label style="margin: 0; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" id="otelEnabled" name="otelEnabled">
+                Enable
+              </label>
+            </div>
+            <div class="helper">Push metrics to an OpenTelemetry collector using <code>--out opentelemetry</code>.</div>
+            <div id="otelFields" style="display: none; margin-top: 0.5rem;">
+              <div class="fields">
+                <div>
+                  <label for="otelProtocol">Protocol</label>
+                  <select id="otelProtocol" name="otelProtocol">
+                    <option value="grpc">gRPC</option>
+                    <option value="http">HTTP</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="otelEndpoint">Endpoint</label>
+                  <input type="text" id="otelEndpoint" name="otelEndpoint" placeholder="localhost:4317">
+                  <div class="helper">gRPC: host:port &nbsp;|&nbsp; HTTP: host:port</div>
+                </div>
+                <div>
+                  <label for="otelServiceName">Service name</label>
+                  <input type="text" id="otelServiceName" name="otelServiceName" placeholder="k6">
+                </div>
+                <div>
+                  <label for="otelMetricPrefix">Metric prefix</label>
+                  <input type="text" id="otelMetricPrefix" name="otelMetricPrefix" placeholder="k6.">
+                </div>
+                <div>
+                  <label for="otelFlushInterval">Flush interval</label>
+                  <input type="text" id="otelFlushInterval" name="otelFlushInterval" placeholder="1s">
+                </div>
+                <div>
+                  <label for="otelInsecure">
+                    <input type="checkbox" id="otelInsecure" name="otelInsecure">
+                    Disable TLS (insecure)
+                  </label>
+                </div>
+              </div>
+              <div id="otelHeadersGroup" style="margin-top: 0.5rem;">
+                <label for="otelHeaders">HTTP headers</label>
+                <input type="text" id="otelHeaders" name="otelHeaders" placeholder="x-api-key=secret,another=value">
+                <div class="helper">Only used for HTTP protocol. Comma-separated key=value pairs.</div>
+              </div>
+            </div>
+          </div>
+
           <div class="actions" style="justify-content: flex-end;">
             <button type="button" class="secondary" id="resetBtn">Reset</button>
             <button type="submit" class="primary">Generate script</button>
@@ -1105,6 +1155,14 @@
     tagsBody.addEventListener("click", handleRowRemoval);
     httpMethodSelect.addEventListener("change", onMethodChange);
 
+    document.getElementById("otelEnabled").addEventListener("change", function () {
+      document.getElementById("otelFields").style.display = this.checked ? "" : "none";
+    });
+
+    document.getElementById("otelProtocol").addEventListener("change", function () {
+      document.getElementById("otelHeadersGroup").style.display = this.value === "http" ? "" : "none";
+    });
+
     configForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (currentMode !== "builder") {
@@ -1395,7 +1453,8 @@
         payload: formData.get("payload")?.toString() ?? "",
         p95ThresholdMs: parseOptionalNumber(formData.get("p95Threshold")),
         tags: gatherKeyValues(tagsBody),
-        checkResponse: formData.get("checkResponse") === "on"
+        checkResponse: formData.get("checkResponse") === "on",
+        otelOutput: buildOtelPayload(formData)
       };
 
       if (!["POST", "PUT", "PATCH"].includes(method)) {
@@ -1407,6 +1466,30 @@
       }
 
       return payload;
+    }
+
+    function buildOtelPayload(formData) {
+      if (formData.get("otelEnabled") !== "on") {
+        return null;
+      }
+
+      const protocol = formData.get("otelProtocol")?.toString() ?? "grpc";
+      const endpoint = formData.get("otelEndpoint")?.toString().trim() ?? "";
+      const serviceName = formData.get("otelServiceName")?.toString().trim() ?? "";
+      const metricPrefix = formData.get("otelMetricPrefix")?.toString().trim() ?? "";
+      const flushInterval = formData.get("otelFlushInterval")?.toString().trim() ?? "";
+      const insecure = formData.get("otelInsecure") === "on";
+      const headers = formData.get("otelHeaders")?.toString().trim() ?? "";
+
+      return {
+        protocol,
+        endpoint: endpoint || null,
+        insecure,
+        serviceName: serviceName || null,
+        metricPrefix: metricPrefix || null,
+        flushInterval: flushInterval || null,
+        headers: (protocol === "http" && headers) ? headers : null
+      };
     }
 
     function parseOptionalNumber(value) {
@@ -1518,11 +1601,13 @@
       }
 
       persistScript(script);
+      const otelOutput = buildOtelPayload(new FormData(configForm));
       const payload = {
         script,
         fileName: fileNameSpan.textContent && fileNameSpan.textContent !== "—"
           ? fileNameSpan.textContent
-          : "k6-script.js"
+          : "k6-script.js",
+        otelOutput
       };
       currentRunController = new AbortController();
       clearRunOutput();
@@ -1862,6 +1947,10 @@
 
       tagsBody.innerHTML = "";
       defaults.tags.forEach(tag => addKeyValueRow(tagsBody, tag));
+
+      document.getElementById("otelEnabled").checked = false;
+      document.getElementById("otelFields").style.display = "none";
+      document.getElementById("otelHeadersGroup").style.display = "none";
 
       onMethodChange();
       setScriptContent("", { persist: !preserveScriptStorage });

@@ -50,7 +50,7 @@ app.MapPost("/api/k6/run", (HttpContext httpContext, K6RunRequest request) =>
     return Results.Stream(async stream =>
     {
         await httpContext.RequestServices.GetRequiredService<IK6Runner>()
-            .RunAsync(scriptToRun, fileName, stream, httpContext.RequestAborted);
+            .RunAsync(scriptToRun, fileName, stream, httpContext.RequestAborted, request.OtelOutput);
     }, "text/plain; charset=utf-8");
 });
 

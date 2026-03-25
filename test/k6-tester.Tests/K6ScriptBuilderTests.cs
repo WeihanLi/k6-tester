@@ -559,4 +559,186 @@ public class K6ScriptBuilderTests
         Assert.Equal("k6 run properties.js", result.Command);
         Assert.NotEmpty(result.Script);
     }
+
+    [Fact]
+    public void BuildScript_WithOtelOutput_IncludesOutFlagInCommand()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelTest",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig()
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Contains("--out opentelemetry", result.Command);
+        Assert.Contains("oteltest.js", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelGrpcEndpoint_IncludesGrpcEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelGrpc",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig
+            {
+                Protocol = "grpc",
+                Endpoint = "localhost:4317"
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Contains("K6_OTEL_GRPC_EXPORTER_ENDPOINT=localhost:4317", result.Command);
+        Assert.Contains("--out opentelemetry", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelHttpProtocol_IncludesHttpEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelHttp",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig
+            {
+                Protocol = "http",
+                Endpoint = "localhost:4318"
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Contains("K6_OTEL_HTTP_EXPORTER_ENDPOINT=localhost:4318", result.Command);
+        Assert.Contains("--out opentelemetry", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelInsecure_IncludesInsecureEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelInsecure",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig
+            {
+                Protocol = "grpc",
+                Insecure = true
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Contains("K6_OTEL_GRPC_EXPORTER_INSECURE=true", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelServiceName_IncludesServiceNameEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelService",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig
+            {
+                ServiceName = "my-service"
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Contains("K6_OTEL_SERVICE_NAME=my-service", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelMetricPrefix_IncludesMetricPrefixEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelPrefix",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig
+            {
+                MetricPrefix = "myapp."
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Contains("K6_OTEL_METRIC_PREFIX=myapp.", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelFlushInterval_IncludesFlushIntervalEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelFlush",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig
+            {
+                FlushInterval = "2s"
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Contains("K6_OTEL_FLUSH_INTERVAL=2s", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelHttpHeaders_IncludesHeadersEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelHeaders",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig
+            {
+                Protocol = "http",
+                Headers = "x-api-key=secret"
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Contains("K6_OTEL_HTTP_EXPORTER_HEADERS=x-api-key=secret", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithOtelGrpcAndHeaders_DoesNotIncludeHttpHeadersEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "OtelGrpcHeaders",
+            TargetUrl = "https://example.com",
+            OtelOutput = new K6OtelOutputConfig
+            {
+                Protocol = "grpc",
+                Headers = "x-api-key=secret"
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.DoesNotContain("K6_OTEL_HTTP_EXPORTER_HEADERS", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithoutOtelOutput_CommandHasNoOtelFlags()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "NoOtel",
+            TargetUrl = "https://example.com"
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("k6 run nootel.js", result.Command);
+        Assert.DoesNotContain("opentelemetry", result.Command);
+    }
 }

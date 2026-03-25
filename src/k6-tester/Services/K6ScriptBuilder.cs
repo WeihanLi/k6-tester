@@ -21,7 +21,7 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
         var fileName = $"{scenarioName}.js";
 
         var script = GenerateScript(config, method, scenarioName);
-        var command = $"k6 run {fileName}";
+        var command = BuildCommand(fileName, config.OtelOutput);
 
         return new K6ScriptResult(script, fileName, command);
     }
@@ -204,6 +204,65 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
     private static string EscapeSingleQuotes(string value) => value.Replace("'", "\\'");
 
     private static string EscapeBackticks(string value) => value.Replace("`", "\\`");
+
+    private static string BuildCommand(string fileName, K6OtelOutputConfig? otelOutput)
+    {
+        if (otelOutput is null)
+        {
+            return $"k6 run {fileName}";
+        }
+
+        var envVars = BuildOtelEnvironmentVariables(otelOutput);
+        var envPrefix = envVars.Count > 0
+            ? string.Join(" ", envVars.Select(kv => $"{kv.Key}={kv.Value}")) + " "
+            : string.Empty;
+
+        return $"{envPrefix}k6 run --out opentelemetry {fileName}";
+    }
+
+    internal static Dictionary<string, string> BuildOtelEnvironmentVariables(K6OtelOutputConfig otelOutput)
+    {
+        var env = new Dictionary<string, string>();
+        var isHttp = string.Equals(otelOutput.Protocol, "http", StringComparison.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.Endpoint))
+        {
+            var key = isHttp
+                ? "K6_OTEL_HTTP_EXPORTER_ENDPOINT"
+                : "K6_OTEL_GRPC_EXPORTER_ENDPOINT";
+            env[key] = otelOutput.Endpoint.Trim();
+        }
+
+        if (otelOutput.Insecure)
+        {
+            var key = isHttp
+                ? "K6_OTEL_HTTP_EXPORTER_INSECURE"
+                : "K6_OTEL_GRPC_EXPORTER_INSECURE";
+            env[key] = "true";
+        }
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.Headers) && isHttp)
+        {
+            env["K6_OTEL_HTTP_EXPORTER_HEADERS"] = otelOutput.Headers.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.ServiceName))
+        {
+            env["K6_OTEL_SERVICE_NAME"] = otelOutput.ServiceName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.MetricPrefix))
+        {
+            env["K6_OTEL_METRIC_PREFIX"] = otelOutput.MetricPrefix.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(otelOutput.FlushInterval))
+        {
+            env["K6_OTEL_FLUSH_INTERVAL"] = otelOutput.FlushInterval.Trim();
+        }
+
+        return env;
+    }
 
     [GeneratedRegex("[^a-zA-Z0-9_-]+", RegexOptions.Compiled)]
     private static partial Regex FileNameSanitizer { get; }
