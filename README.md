@@ -1,7 +1,7 @@
 # k6-tester
 
 `k6-tester` is a minimal ASP.NET Core app paired with a lightweight
-single-page UI that helps you design, run, and share [k6](https://k6.io) load
+single-page UI that helps you design, run, and share [k6](https://github.com/grafana/k6) load
 tests without leaving the browser. Use the visual builder to configure
 scenarios, review the generated JavaScript, and execute it directly through the
 bundled k6 CLI integration while live output streams back to the page.
