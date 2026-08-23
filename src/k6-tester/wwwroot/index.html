@@ -618,6 +618,14 @@
       flex-wrap: wrap;
     }
 
+    .script-output-config {
+      margin-top: 0.25rem;
+      padding: 0.9rem 1rem;
+      border: 1px solid #333;
+      border-radius: 10px;
+      background: #232323;
+    }
+
     .output-pane-header {
       display: flex;
       align-items: center;
@@ -801,75 +809,6 @@
             <div class="helper">Only used for POST, PUT and PATCH requests</div>
           </div>
 
-          <div>
-            <div class="inline" style="justify-content: space-between;">
-              <h3 style="margin: 1rem 0 0.35rem; font-size: 0.95rem;">Output</h3>
-              <label style="margin: 0; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-                <input type="checkbox" id="outputEnabled" name="outputEnabled">
-                Enable
-              </label>
-            </div>
-            <div class="helper">Export metrics to an external backend using <code>--out</code>.</div>
-            <div id="outputFields" style="display: none; margin-top: 0.5rem;">
-              <div class="fields" style="margin-bottom: 0.5rem;">
-                <div>
-                  <label for="outputType">Output type</label>
-                  <select id="outputType" name="outputType">
-                    <option value="opentelemetry" selected="selected">OpenTelemetry</option>
-                    <option value="influxdb">InfluxDB</option>
-                    <option value="json">JSON</option>
-                    <option value="csv">CSV</option>
-                    <option value="cloud">Grafana Cloud k6</option>
-                  </select>
-                </div>
-                <div id="outputUrlGroup">
-                  <label for="outputUrl">URL / path</label>
-                  <input type="text" id="outputUrl" name="outputUrl" placeholder="http://localhost:8086/k6" />
-                  <div class="helper" id="outputUrlHelper">Used as the value in <code>--out type=value</code>.</div>
-                </div>
-              </div>
-              <div id="otelFields">
-                <div class="fields">
-                  <div>
-                    <label for="otelProtocol">Protocol</label>
-                    <select id="otelProtocol" name="otelProtocol">
-                      <option value="grpc" selected="selected">gRPC</option>
-                      <option value="http">HTTP</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="otelEndpoint">Endpoint</label>
-                    <input type="text" id="otelEndpoint" name="otelEndpoint" placeholder="localhost:4317" value="localhost:4317" />
-                    <div class="helper">gRPC: host:port &nbsp;|&nbsp; HTTP: host:port</div>
-                  </div>
-                  <div>
-                    <label for="otelServiceName">Service name</label>
-                    <input type="text" id="otelServiceName" name="otelServiceName" placeholder="k6-tester" value="k6-tester" />
-                  </div>
-                  <div>
-                    <label for="otelMetricPrefix">Metric prefix</label>
-                    <input type="text" id="otelMetricPrefix" name="otelMetricPrefix" placeholder="k6." value="k6." />
-                  </div>
-                  <div>
-                    <label for="otelFlushInterval">Flush interval</label>
-                    <input type="text" id="otelFlushInterval" name="otelFlushInterval" placeholder="1s" value="1s" />
-                  </div>
-                  <div>
-                    <label for="otelInsecure">
-                      <input type="checkbox" id="otelInsecure" name="otelInsecure" checked="checked" />
-                      Disable TLS (insecure)
-                    </label>
-                  </div>
-                </div>
-                <div id="otelHeadersGroup" style="margin-top: 0.5rem;">
-                  <label for="otelHeaders">HTTP headers</label>
-                  <input type="text" id="otelHeaders" name="otelHeaders" placeholder="x-api-key=secret,another=value" />
-                  <div class="helper">Only used for HTTP protocol. Comma-separated key=value pairs.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div class="actions" style="justify-content: flex-end;">
             <button type="button" class="secondary" id="resetBtn">Reset</button>
             <button type="submit" class="primary">Generate script</button>
@@ -891,6 +830,74 @@
             <textarea id="scriptOutput" placeholder="Configure the form and click Generate script." hidden></textarea>
             <div class="helper">
               Suggested file name: <span id="fileName">—</span>
+            </div>
+            <div class="script-output-config">
+              <div class="inline" style="justify-content: space-between;">
+                <h3 style="margin: 0; font-size: 0.95rem;">Output</h3>
+                <label style="margin: 0; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                  <input type="checkbox" id="outputEnabled" name="outputEnabled" form="configForm">
+                  Enable
+                </label>
+              </div>
+              <div class="helper">Export metrics to an external backend using <code>--out</code>.</div>
+              <div id="outputFields" style="display: none; margin-top: 0.5rem;">
+                <div class="fields" style="margin-bottom: 0.5rem;">
+                  <div>
+                    <label for="outputType">Output type</label>
+                    <select id="outputType" name="outputType" form="configForm">
+                      <option value="opentelemetry" selected="selected">OpenTelemetry</option>
+                      <option value="influxdb">InfluxDB</option>
+                      <option value="json">JSON</option>
+                      <option value="csv">CSV</option>
+                      <option value="cloud">Grafana Cloud k6</option>
+                    </select>
+                  </div>
+                  <div id="outputUrlGroup">
+                    <label for="outputUrl">URL / path</label>
+                    <input type="text" id="outputUrl" name="outputUrl" form="configForm" placeholder="http://localhost:8086/k6" />
+                    <div class="helper" id="outputUrlHelper">Used as the value in <code>--out type=value</code>.</div>
+                  </div>
+                </div>
+                <div id="otelFields">
+                  <div class="fields">
+                    <div>
+                      <label for="otelProtocol">Protocol</label>
+                      <select id="otelProtocol" name="otelProtocol" form="configForm">
+                        <option value="grpc" selected="selected">gRPC</option>
+                        <option value="http">HTTP</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="otelEndpoint">Endpoint</label>
+                      <input type="text" id="otelEndpoint" name="otelEndpoint" form="configForm" placeholder="localhost:4317" value="localhost:4317" />
+                      <div class="helper">gRPC: host:port &nbsp;|&nbsp; HTTP: host:port</div>
+                    </div>
+                    <div>
+                      <label for="otelServiceName">Service name</label>
+                      <input type="text" id="otelServiceName" name="otelServiceName" form="configForm" placeholder="k6-tester" value="k6-tester" />
+                    </div>
+                    <div>
+                      <label for="otelMetricPrefix">Metric prefix</label>
+                      <input type="text" id="otelMetricPrefix" name="otelMetricPrefix" form="configForm" placeholder="k6." value="k6." />
+                    </div>
+                    <div>
+                      <label for="otelFlushInterval">Flush interval</label>
+                      <input type="text" id="otelFlushInterval" name="otelFlushInterval" form="configForm" placeholder="1s" value="1s" />
+                    </div>
+                    <div>
+                      <label for="otelInsecure">
+                        <input type="checkbox" id="otelInsecure" name="otelInsecure" form="configForm" checked="checked" />
+                        Disable TLS (insecure)
+                      </label>
+                    </div>
+                  </div>
+                  <div id="otelHeadersGroup" style="margin-top: 0.5rem;">
+                    <label for="otelHeaders">HTTP headers</label>
+                    <input type="text" id="otelHeaders" name="otelHeaders" form="configForm" placeholder="x-api-key=secret,another=value" />
+                    <div class="helper">Only used for HTTP protocol. Comma-separated key=value pairs.</div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="actions">
               <div>
