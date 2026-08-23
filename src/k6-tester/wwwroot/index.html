@@ -815,7 +815,7 @@
                 <div>
                   <label for="outputType">Output type</label>
                   <select id="outputType" name="outputType">
-                    <option value="opentelemetry">OpenTelemetry</option>
+                    <option value="opentelemetry" selected="selected">OpenTelemetry</option>
                     <option value="influxdb">InfluxDB</option>
                     <option value="json">JSON</option>
                     <option value="csv">CSV</option>
@@ -824,7 +824,7 @@
                 </div>
                 <div id="outputUrlGroup">
                   <label for="outputUrl">URL / path</label>
-                  <input type="text" id="outputUrl" name="outputUrl" placeholder="http://localhost:8086/k6">
+                  <input type="text" id="outputUrl" name="outputUrl" placeholder="http://localhost:8086/k6" />
                   <div class="helper" id="outputUrlHelper">Used as the value in <code>--out type=value</code>.</div>
                 </div>
               </div>
@@ -833,37 +833,37 @@
                   <div>
                     <label for="otelProtocol">Protocol</label>
                     <select id="otelProtocol" name="otelProtocol">
-                      <option value="grpc">gRPC</option>
+                      <option value="grpc" selected="selected">gRPC</option>
                       <option value="http">HTTP</option>
                     </select>
                   </div>
                   <div>
                     <label for="otelEndpoint">Endpoint</label>
-                    <input type="text" id="otelEndpoint" name="otelEndpoint" placeholder="localhost:4317">
+                    <input type="text" id="otelEndpoint" name="otelEndpoint" placeholder="localhost:4317" value="localhost:4317" />
                     <div class="helper">gRPC: host:port &nbsp;|&nbsp; HTTP: host:port</div>
                   </div>
                   <div>
                     <label for="otelServiceName">Service name</label>
-                    <input type="text" id="otelServiceName" name="otelServiceName" placeholder="k6">
+                    <input type="text" id="otelServiceName" name="otelServiceName" placeholder="k6-tester" value="k6-tester" />
                   </div>
                   <div>
                     <label for="otelMetricPrefix">Metric prefix</label>
-                    <input type="text" id="otelMetricPrefix" name="otelMetricPrefix" placeholder="k6.">
+                    <input type="text" id="otelMetricPrefix" name="otelMetricPrefix" placeholder="k6." value="k6." />
                   </div>
                   <div>
                     <label for="otelFlushInterval">Flush interval</label>
-                    <input type="text" id="otelFlushInterval" name="otelFlushInterval" placeholder="1s">
+                    <input type="text" id="otelFlushInterval" name="otelFlushInterval" placeholder="1s" value="1s" />
                   </div>
                   <div>
                     <label for="otelInsecure">
-                      <input type="checkbox" id="otelInsecure" name="otelInsecure">
+                      <input type="checkbox" id="otelInsecure" name="otelInsecure" checked="checked" />
                       Disable TLS (insecure)
                     </label>
                   </div>
                 </div>
                 <div id="otelHeadersGroup" style="margin-top: 0.5rem;">
                   <label for="otelHeaders">HTTP headers</label>
-                  <input type="text" id="otelHeaders" name="otelHeaders" placeholder="x-api-key=secret,another=value">
+                  <input type="text" id="otelHeaders" name="otelHeaders" placeholder="x-api-key=secret,another=value" />
                   <div class="helper">Only used for HTTP protocol. Comma-separated key=value pairs.</div>
                 </div>
               </div>
