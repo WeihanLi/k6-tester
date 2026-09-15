@@ -56,7 +56,7 @@ public sealed class K6Runner : IK6Runner
                     return;
                 }
 
-                var needsUrl = type is not "opentelemetry" and not "cloud";
+                var needsUrl = type is not "opentelemetry" and not "cloud" and not "experimental-prometheus-rw";
                 var url = needsUrl ? output.Url?.Trim() : null;
                 startInfo.ArgumentList.Add("--out");
                 var outArg = string.IsNullOrWhiteSpace(url)
@@ -68,6 +68,15 @@ public sealed class K6Runner : IK6Runner
                 if (isOtel && output.OpenTelemetry is { } otelConfig)
                 {
                     foreach (var (key, value) in K6ScriptBuilder.BuildOtelEnvironmentVariables(otelConfig))
+                    {
+                        startInfo.Environment[key] = value;
+                    }
+                }
+
+                var isPrometheusRw = string.Equals(type, "experimental-prometheus-rw", StringComparison.OrdinalIgnoreCase);
+                if (isPrometheusRw && output.PrometheusRemoteWrite is { } prometheusRwConfig)
+                {
+                    foreach (var (key, value) in K6ScriptBuilder.BuildPrometheusRwEnvironmentVariables(prometheusRwConfig))
                     {
                         startInfo.Environment[key] = value;
                     }

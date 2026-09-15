@@ -23,4 +23,10 @@ public sealed class K6OutputConfig
     /// These are translated into <c>K6_OTEL_*</c> environment variables at run time.
     /// </summary>
     public K6OtelOutputConfig? OpenTelemetry { get; set; }
+
+    /// <summary>
+    /// Prometheus remote write-specific options. Only used when <see cref="Type"/> is "experimental-prometheus-rw".
+    /// These are translated into <c>K6_PROMETHEUS_RW_*</c> environment variables at run time.
+    /// </summary>
+    public K6PrometheusRwOutputConfig? PrometheusRemoteWrite { get; set; }
 }

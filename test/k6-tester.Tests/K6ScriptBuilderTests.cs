@@ -738,6 +738,91 @@ public class K6ScriptBuilderTests
     }
 
     [Fact]
+    public void BuildScript_WithPrometheusRwOutput_IncludesOutFlagWithoutUrl()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "PromRwTest",
+            TargetUrl = "https://example.com",
+            Output = new K6OutputConfig { Type = "experimental-prometheus-rw", Url = "should-be-ignored" }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.Equal("k6 run --out experimental-prometheus-rw promrwtest.js", result.Command);
+    }
+
+    [Fact]
+    public void BuildScript_WithPrometheusRwServerUrl_IncludesServerUrlEnvVar()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "PromRwServerUrl",
+            TargetUrl = "https://example.com",
+            Output = new K6OutputConfig
+            {
+                Type = "experimental-prometheus-rw",
+                PrometheusRemoteWrite = new K6PrometheusRwOutputConfig { ServerUrl = "http://prometheus:9090/api/v1/write" }
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("http://prometheus:9090/api/v1/write", result.EnvironmentVariables["K6_PROMETHEUS_RW_SERVER_URL"]);
+    }
+
+    [Fact]
+    public void BuildScript_WithPrometheusRwBasicAuth_IncludesUsernameAndPasswordEnvVars()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "PromRwAuth",
+            TargetUrl = "https://example.com",
+            Output = new K6OutputConfig
+            {
+                Type = "experimental-prometheus-rw",
+                PrometheusRemoteWrite = new K6PrometheusRwOutputConfig { Username = "user", Password = "pass" }
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("user", result.EnvironmentVariables["K6_PROMETHEUS_RW_USERNAME"]);
+        Assert.Equal("pass", result.EnvironmentVariables["K6_PROMETHEUS_RW_PASSWORD"]);
+    }
+
+    [Fact]
+    public void BuildScript_WithPrometheusRwHeadersAndTrendStats_IncludesEnvVars()
+    {
+        var config = new K6LoadTestConfig
+        {
+            TestName = "PromRwHeaders",
+            TargetUrl = "https://example.com",
+            Output = new K6OutputConfig
+            {
+                Type = "experimental-prometheus-rw",
+                PrometheusRemoteWrite = new K6PrometheusRwOutputConfig
+                {
+                    Headers = "X-Header:value",
+                    TrendStats = "p(95),p(99)",
+                    PushInterval = "10s",
+                    InsecureSkipTlsVerify = true
+                }
+            }
+        };
+
+        var result = _k6ScriptBuilder.BuildScript(config);
+
+        Assert.NotNull(result.EnvironmentVariables);
+        Assert.Equal("X-Header:value", result.EnvironmentVariables["K6_PROMETHEUS_RW_HTTP_HEADERS"]);
+        Assert.Equal("p(95),p(99)", result.EnvironmentVariables["K6_PROMETHEUS_RW_TREND_STATS"]);
+        Assert.Equal("10s", result.EnvironmentVariables["K6_PROMETHEUS_RW_PUSH_INTERVAL"]);
+        Assert.Equal("true", result.EnvironmentVariables["K6_PROMETHEUS_RW_INSECURE_SKIP_TLS_VERIFY"]);
+    }
+
+    [Fact]
     public void BuildScript_WithoutOutput_CommandHasNoOutFlag()
     {
         var config = new K6LoadTestConfig
