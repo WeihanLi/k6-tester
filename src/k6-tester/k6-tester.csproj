@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>K6Tester</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <PublishAot>true</PublishAot>
   </PropertyGroup>
 
