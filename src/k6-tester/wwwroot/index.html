@@ -850,6 +850,7 @@
                       <option value="json">JSON</option>
                       <option value="csv">CSV</option>
                       <option value="cloud">Grafana Cloud k6</option>
+                      <option value="experimental-prometheus-rw">Prometheus Remote Write</option>
                     </select>
                   </div>
                   <div id="outputUrlGroup">
@@ -895,6 +896,42 @@
                     <label for="otelHeaders">HTTP headers</label>
                     <input type="text" id="otelHeaders" name="otelHeaders" form="configForm" placeholder="x-api-key=secret,another=value" />
                     <div class="helper">Only used for HTTP protocol. Comma-separated key=value pairs.</div>
+                  </div>
+                </div>
+                <div id="prometheusRwFields" style="display: none;">
+                  <div class="fields">
+                    <div>
+                      <label for="prometheusRwServerUrl">Server URL</label>
+                      <input type="text" id="prometheusRwServerUrl" name="prometheusRwServerUrl" form="configForm" placeholder="http://localhost:9090/api/v1/write" value="http://localhost:9090/api/v1/write" />
+                    </div>
+                    <div>
+                      <label for="prometheusRwUsername">Username</label>
+                      <input type="text" id="prometheusRwUsername" name="prometheusRwUsername" form="configForm" placeholder="Optional basic auth username" />
+                    </div>
+                    <div>
+                      <label for="prometheusRwPassword">Password</label>
+                      <input type="password" id="prometheusRwPassword" name="prometheusRwPassword" form="configForm" placeholder="Optional basic auth password" />
+                    </div>
+                    <div>
+                      <label for="prometheusRwPushInterval">Push interval</label>
+                      <input type="text" id="prometheusRwPushInterval" name="prometheusRwPushInterval" form="configForm" placeholder="5s" value="5s" />
+                    </div>
+                    <div>
+                      <label for="prometheusRwTrendStats">Trend stats</label>
+                      <input type="text" id="prometheusRwTrendStats" name="prometheusRwTrendStats" form="configForm" placeholder="p(99)" value="p(99)" />
+                      <div class="helper">Comma-separated stats, e.g. p(95),p(99),min,max.</div>
+                    </div>
+                    <div>
+                      <label for="prometheusRwInsecureSkipTlsVerify">
+                        <input type="checkbox" id="prometheusRwInsecureSkipTlsVerify" name="prometheusRwInsecureSkipTlsVerify" form="configForm" />
+                        Skip TLS verify (insecure)
+                      </label>
+                    </div>
+                  </div>
+                  <div id="prometheusRwHeadersGroup" style="margin-top: 0.5rem;">
+                    <label for="prometheusRwHeaders">HTTP headers</label>
+                    <input type="text" id="prometheusRwHeaders" name="prometheusRwHeaders" form="configForm" placeholder="X-Header:value,Another:value" />
+                    <div class="helper">Comma-separated key:value pairs.</div>
                   </div>
                 </div>
               </div>
@@ -1188,8 +1225,10 @@
       }
       const type = document.getElementById("outputType").value;
       const isOtel = type === "opentelemetry";
+      const isPrometheusRw = type === "experimental-prometheus-rw";
       const needsUrl = ["influxdb", "json", "csv"].includes(type);
       document.getElementById("otelFields").style.display = isOtel ? "" : "none";
+      document.getElementById("prometheusRwFields").style.display = isPrometheusRw ? "" : "none";
       document.getElementById("outputUrlGroup").style.display = needsUrl ? "" : "none";
       const urlPlaceholders = {
         influxdb: "http://localhost:8086/k6",
@@ -1530,7 +1569,8 @@
       const outputPayload = {
         type,
         url: url || null,
-        openTelemetry: null
+        openTelemetry: null,
+        prometheusRemoteWrite: null
       };
 
       if (type === "opentelemetry") {
@@ -1550,6 +1590,26 @@
           metricPrefix: metricPrefix || null,
           flushInterval: flushInterval || null,
           headers: (protocol === "http" && headers) ? headers : null
+        };
+      }
+
+      if (type === "experimental-prometheus-rw") {
+        const serverUrl = formData.get("prometheusRwServerUrl")?.toString().trim() ?? "";
+        const username = formData.get("prometheusRwUsername")?.toString().trim() ?? "";
+        const password = formData.get("prometheusRwPassword")?.toString().trim() ?? "";
+        const headers = formData.get("prometheusRwHeaders")?.toString().trim() ?? "";
+        const trendStats = formData.get("prometheusRwTrendStats")?.toString().trim() ?? "";
+        const pushInterval = formData.get("prometheusRwPushInterval")?.toString().trim() ?? "";
+        const insecureSkipTlsVerify = formData.get("prometheusRwInsecureSkipTlsVerify") === "on";
+
+        outputPayload.prometheusRemoteWrite = {
+          serverUrl: serverUrl || null,
+          username: username || null,
+          password: password || null,
+          headers: headers || null,
+          trendStats: trendStats || null,
+          pushInterval: pushInterval || null,
+          insecureSkipTlsVerify
         };
       }
 

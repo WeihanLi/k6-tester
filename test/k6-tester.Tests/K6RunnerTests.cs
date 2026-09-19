@@ -205,6 +205,40 @@ public class K6RunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_WithPrometheusRwOutput_AddsOutArgWithoutUrlAndEnvVars()
+    {
+        using var output = new MemoryStream();
+        var capturingRunner = new CapturingProcessRunner(
+            stdout: Array.Empty<string>(),
+            stderr: Array.Empty<string>());
+        var runner = new K6Runner(capturingRunner);
+
+        var outputConfig = new K6OutputConfig
+        {
+            Type = "experimental-prometheus-rw",
+            Url = "should-be-ignored",
+            PrometheusRemoteWrite = new K6PrometheusRwOutputConfig
+            {
+                ServerUrl = "http://prometheus:9090/api/v1/write",
+                Username = "user",
+                Password = "pass"
+            }
+        };
+
+        await runner.RunAsync("console.log('ok');", "test.js", output, default, outputConfig);
+
+        var args = capturingRunner.CapturedStartInfo!.ArgumentList;
+        Assert.Contains("--out", args);
+        Assert.Contains("experimental-prometheus-rw", args);
+        Assert.DoesNotContain(args, a => a.Contains("should-be-ignored"));
+
+        var env = capturingRunner.CapturedStartInfo.Environment;
+        Assert.Equal("http://prometheus:9090/api/v1/write", env["K6_PROMETHEUS_RW_SERVER_URL"]);
+        Assert.Equal("user", env["K6_PROMETHEUS_RW_USERNAME"]);
+        Assert.Equal("pass", env["K6_PROMETHEUS_RW_PASSWORD"]);
+    }
+
+    [Fact]
     public async Task RunAsync_WithInfluxDbOutput_AddsOutArgWithUrl()
     {
         using var output = new MemoryStream();

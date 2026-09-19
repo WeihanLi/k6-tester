@@ -219,7 +219,7 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
             return $"k6 run {fileName}";
         }
 
-        var needsUrl = type is not "opentelemetry" and not "cloud";
+        var needsUrl = type is not "opentelemetry" and not "cloud" and not "experimental-prometheus-rw";
         var url = needsUrl ? output.Url?.Trim() : null;
         var outArg = string.IsNullOrWhiteSpace(url)
             ? type
@@ -235,12 +235,19 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
             return new Dictionary<string, string>();
         }
 
-        var isOtel = string.Equals(output.Type.Trim(), "opentelemetry", StringComparison.OrdinalIgnoreCase) &&
-                     output.OpenTelemetry is not null;
+        var type = output.Type.Trim();
 
-        return isOtel
-            ? BuildOtelEnvironmentVariables(output.OpenTelemetry!)
-            : new Dictionary<string, string>();
+        if (string.Equals(type, "opentelemetry", StringComparison.OrdinalIgnoreCase) && output.OpenTelemetry is not null)
+        {
+            return BuildOtelEnvironmentVariables(output.OpenTelemetry);
+        }
+
+        if (string.Equals(type, "experimental-prometheus-rw", StringComparison.OrdinalIgnoreCase) && output.PrometheusRemoteWrite is not null)
+        {
+            return BuildPrometheusRwEnvironmentVariables(output.PrometheusRemoteWrite);
+        }
+
+        return new Dictionary<string, string>();
     }
 
     internal static Dictionary<string, string> BuildOtelEnvironmentVariables(K6OtelOutputConfig otelOutput)
@@ -282,6 +289,48 @@ public partial class K6ScriptBuilder : IK6ScriptBuilder
         if (!string.IsNullOrWhiteSpace(otelOutput.FlushInterval))
         {
             env["K6_OTEL_FLUSH_INTERVAL"] = otelOutput.FlushInterval.Trim();
+        }
+
+        return env;
+    }
+
+    internal static Dictionary<string, string> BuildPrometheusRwEnvironmentVariables(K6PrometheusRwOutputConfig prometheusRwOutput)
+    {
+        var env = new Dictionary<string, string>();
+
+        if (!string.IsNullOrWhiteSpace(prometheusRwOutput.ServerUrl))
+        {
+            env["K6_PROMETHEUS_RW_SERVER_URL"] = prometheusRwOutput.ServerUrl.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(prometheusRwOutput.Username))
+        {
+            env["K6_PROMETHEUS_RW_USERNAME"] = prometheusRwOutput.Username.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(prometheusRwOutput.Password))
+        {
+            env["K6_PROMETHEUS_RW_PASSWORD"] = prometheusRwOutput.Password.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(prometheusRwOutput.Headers))
+        {
+            env["K6_PROMETHEUS_RW_HTTP_HEADERS"] = prometheusRwOutput.Headers.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(prometheusRwOutput.TrendStats))
+        {
+            env["K6_PROMETHEUS_RW_TREND_STATS"] = prometheusRwOutput.TrendStats.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(prometheusRwOutput.PushInterval))
+        {
+            env["K6_PROMETHEUS_RW_PUSH_INTERVAL"] = prometheusRwOutput.PushInterval.Trim();
+        }
+
+        if (prometheusRwOutput.InsecureSkipTlsVerify)
+        {
+            env["K6_PROMETHEUS_RW_INSECURE_SKIP_TLS_VERIFY"] = "true";
         }
 
         return env;
